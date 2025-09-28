@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contabilidad de Alumnos - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active {
+            border-bottom-color: #3b82f6; /* blue-500 */
+            color: #3b82f6;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .student-inactive {
+            opacity: 0.6;
+            background-color: #f3f4f6; /* gray-100 */
+        }
+        .student-inactive td:first-child .text-gray-900 {
+            text-decoration: line-through;
+        }
+        .progress-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: conic-gradient(#4ade80 var(--p, 0%), #e5e7eb 0);
+            transition: background 0.3s;
+        }
+        .progress-circle-inner {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .status-overdue {
+            background-color: #fee2e2; /* red-100 */
+            color: #b91c1c; /* red-700 */
+            font-weight: bold;
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #invoice-content, #invoice-content * {
+                visibility: visible;
+            }
+            #invoice-content {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="login-wrapper" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="login-user" class="block text-sm font-medium text-gray-700">Usuario</label>
+                    <input type="text" id="login-user" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" value="Dulce">
+                </div>
+                <div>
+                    <label for="login-pass" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <input type="password" id="login-pass" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3">
+                </div>
+                <p id="login-error" class="text-red-500 text-sm text-center hidden">Credenciales incorrectas. Inténtalo de nuevo.</p>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-wrapper" class="hidden container mx-auto p-4 md:p-8 max-w-screen-2xl">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Gestión Contable Administrativa</h1>
+            <p class="text-gray-600 mt-2">Panel de control de finanzas, alumnos y proyecciones.</p>
+        </header>
+
+        <!-- Navegación de Pestañas -->
+        <div class="mb-8 border-b border-gray-200">
+            <nav class="-mb-px flex justify-center space-x-6" aria-label="Tabs">
+                <button class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="dashboard">Panel General</button>
+                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="students">Alumnos</button>
+                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="gas">Gasolina</button>
+                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="projections">Proyecciones</button>
+            </nav>
+        </div>
+
+        <main>
+            <!-- Contenido Pestaña 1: Panel General -->
+            <div id="dashboard-tab" class="tab-content active">
+                <h2 class="text-2xl font-semibold mb-6 text-center">Resumen por Programa</h2>
+                <div id="dashboard-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                </div>
+                <div id="dashboard-loader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
+                 <div id="dashboard-empty" class="text-center py-16 text-gray-500 hidden">
+                    <p>No hay datos para mostrar. Agregue alumnos para ver el resumen.</p>
+                </div>
+                
+                <h2 class="text-2xl font-semibold mb-6 mt-10 text-center">Resumen por Generación</h2>
+                <div id="generation-dashboard-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                </div>
+            </div>
+
+            <!-- Contenido Pestaña 2: Alumnos -->
+            <div id="students-tab" class="tab-content">
+                <!-- SECCIÓN DE REPORTE MENSUAL -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                         <h2 class="text-xl font-semibold mb-4">Reporte Mensual de Pagos</h2>
+                         <button id="export-csv-btn" class="mb-4 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm">Exportar a CSV</button>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <div>
+                            <label for="month-filter" class="text-sm font-medium">Mes:</label>
+                            <select id="month-filter" class="rounded-lg border-gray-300"></select>
+                        </div>
+                        <div>
+                            <label for="year-filter" class="text-sm font-medium">Año:</label>
+                            <select id="year-filter" class="rounded-lg border-gray-300"></select>
+                        </div>
+                        <div>
+                            <label for="program-filter" class="text-sm font-medium">Programa:</label>
+                            <select id="program-filter" class="rounded-lg border-gray-300">
+                                <option value="Todos">Todos los Programas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="monthly-progress-container" class="flex flex-col md:flex-row items-center gap-8 p-4 bg-gray-50 rounded-lg">
+                        <div class="progress-circle" id="monthly-progress-circle">
+                            <span id="monthly-progress-text" class="progress-circle-inner text-gray-800">0%</span>
+                        </div>
+                        <div class="flex-1 text-center md:text-left">
+                            <p class="text-gray-600">Progreso de Cobranza del Mes</p>
+                            <p class="text-2xl font-bold text-gray-900"><span id="monthly-collected"></span> / <span id="monthly-expected"></span></p>
+                        </div>
+                    </div>
+                    <div class="mt-6 overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                             <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Alumno</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Generación</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto Mensual</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha de Vencimiento</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado del Mes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthly-report-table-body" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                         <div id="monthly-report-empty" class="text-center py-8 text-gray-500 hidden">
+                            <p>No hay pagos programados para este mes.</p>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                    <!-- Columna de Formulario -->
+                    <div class="xl:col-span-2 space-y-8">
+                        <div class="bg-white p-6 rounded-2xl shadow-lg">
+                            <h2 class="text-xl font-semibold mb-4">Agregar Nuevo Alumno</h2>
+                            <form id="add-student-form" class="space-y-4">
+                                <div>
+                                    <label for="student-name" class="block text-sm font-medium text-gray-700">Nombre del Alumno</label>
+                                    <input type="text" id="student-name" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="Ej. Juan Pérez">
+                                </div>
+                                <div>
+                                    <label for="student-generation" class="block text-sm font-medium text-gray-700">Generación</label>
+                                    <input type="number" id="student-generation" required min="1" step="1" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="Ej. 32">
+                                </div>
+                                <div>
+                                    <label for="student-institution" class="block text-sm font-medium text-gray-700">Institución</label>
+                                    <select id="student-institution" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3">
+                                        <option value="UDC">UDC</option>
+                                        <option value="IESM">IESM</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="student-program" class="block text-sm font-medium text-gray-700">Programa</label>
+                                    <select id="student-program" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3">
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="student-start-date" class="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
+                                    <input type="date" id="student-start-date" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3">
+                                </div>
+                                <div id="monthly-payment-section" class="space-y-4">
+                                    <div>
+                                        <label for="regular-monthly-amount" class="block text-sm font-medium text-gray-700">Costo Mensual Regular ($)</label>
+                                        <input type="number" id="regular-monthly-amount" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="Ej. 1000.00">
+                                    </div>
+                                    <div>
+                                        <label for="scholarship-percentage" class="block text-sm font-medium text-gray-700">Beca (%)</label>
+                                        <input type="number" id="scholarship-percentage" min="0" max="100" step="1" value="0" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="Ej. 25">
+                                    </div>
+                                    <div>
+                                        <label for="monthly-amount" class="block text-sm font-medium text-gray-500">Monto Mensual a Pagar (calculado)</label>
+                                        <input type="text" id="monthly-amount" disabled class="mt-1 block w-full bg-gray-200 border-gray-300 rounded-lg p-3 font-bold">
+                                    </div>
+                                    <div>
+                                        <label for="installments-number" class="block text-sm font-medium text-gray-700">Número de Mensualidades</label>
+                                        <input type="number" id="installments-number" required min="1" step="1" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="Ej. 24">
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="paid-in-full-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                    <label for="paid-in-full-checkbox" class="ml-2 block text-sm text-gray-900">Pago de Contado</label>
+                                </div>
+                                <div id="paid-in-full-details" class="hidden space-y-4">
+                                    <div>
+                                         <label for="total-cost" class="block text-sm font-medium text-gray-700">Costo Total ($)</label>
+                                         <input type="number" id="total-cost" min="0" step="0.01" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="Ej. 24000.00">
+                                    </div>
+                                    <div>
+                                        <label for="program-duration" class="block text-sm font-medium text-gray-700">Duración del Programa (meses)</label>
+                                        <input type="number" id="program-duration" min="1" step="1" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="Ej. 24">
+                                   </div>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Agregar Alumno</button>
+                            </form>
+                        </div>
+                    </div>
+                    <!-- Columna de la Lista de Alumnos -->
+                    <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Lista General de Alumnos</h2>
+                        <div id="students-loader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
+                        <div id="students-list-container" class="overflow-x-auto hidden">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Nombre / Fin de Programa</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Generación</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Institución</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Programa</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Progreso Total</th>
+                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                             <div id="students-empty" class="text-center py-16 text-gray-500 hidden">
+                                <p>No hay alumnos registrados.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contenido Pestaña 3: Gasolina -->
+            <div id="gas-tab" class="tab-content">
+                <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                    <div class="xl:col-span-2 space-y-8">
+                        <div class="bg-white p-6 rounded-2xl shadow-lg">
+                            <h2 class="text-xl font-semibold mb-4">Registrar Gasto de Gasolina</h2>
+                            <form id="add-gas-form" class="space-y-4">
+                                <div>
+                                    <label for="gas-driver-select" class="block text-sm font-medium text-gray-700">Nombre</label>
+                                    <select id="gas-driver-select" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3"></select>
+                                </div>
+                                <div id="gas-viaticos-details" class="hidden">
+                                    <label for="gas-viaticos-name" class="block text-sm font-medium text-gray-700">Nombre para Viáticos</label>
+                                    <input type="text" id="gas-viaticos-name" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="Nombre de la persona">
+                                </div>
+                                 <div>
+                                    <label for="gas-model-select" class="block text-sm font-medium text-gray-700">Auto</label>
+                                    <select id="gas-model-select" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3"></select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="gas-card" class="block text-sm font-medium text-gray-700"># Tarjeta</label>
+                                        <input type="text" id="gas-card" readonly class="mt-1 block w-full bg-gray-200 border-gray-300 rounded-lg p-3">
+                                    </div>
+                                     <div>
+                                        <label for="gas-brand" class="block text-sm font-medium text-gray-700">Marca</label>
+                                        <input type="text" id="gas-brand" readonly class="mt-1 block w-full bg-gray-200 border-gray-300 rounded-lg p-3">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="gas-date" class="block text-sm font-medium text-gray-700">Fecha de Emisión</label>
+                                    <input type="datetime-local" id="gas-date" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="gas-quantity" class="block text-sm font-medium text-gray-700">Cantidad (L)</label>
+                                        <input type="number" id="gas-quantity" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="50.5">
+                                    </div>
+                                     <div>
+                                        <label for="gas-price" class="block text-sm font-medium text-gray-700">Precio x Litro</label>
+                                        <input type="number" id="gas-price" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="24.50">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="gas-subtotal" class="block text-sm font-medium text-gray-700">Subtotal ($)</label>
+                                    <input type="number" id="gas-subtotal" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="1083.08">
+                                </div>
+                                <div>
+                                    <label for="gas-iva" class="block text-sm font-medium text-gray-500">IVA (16%)</label>
+                                    <input type="text" id="gas-iva" readonly class="mt-1 block w-full bg-gray-200 border-gray-300 rounded-lg p-3 font-bold">
+                                </div>
+                                <div>
+                                    <label for="gas-total" class="block text-sm font-medium text-gray-700">Total ($)</label>
+                                    <input type="number" id="gas-total" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" placeholder="1250.64">
+                                </div>
+                                 <div>
+                                    <label class="block text-sm font-medium text-gray-700">Adjuntar Factura</label>
+                                    <input type="file" id="gas-file" class="hidden" accept="image/*,.pdf">
+                                    <button type="button" id="gas-upload-btn" class="w-full mt-1 text-sm border border-gray-300 py-2 rounded-md">Seleccionar Archivo (Max 1MB)</button>
+                                    <span id="gas-file-name" class="text-xs text-gray-500 block mt-1"></span>
+                                 </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Registrar Gasto</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
+                         <h2 class="text-xl font-semibold mb-4">Historial de Gastos</h2>
+                        <div id="gas-list-container" class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehículo</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Factura</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gas-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                            <div id="gas-empty" class="text-center py-16 text-gray-500 hidden">
+                                <p>No hay gastos de gasolina registrados.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="gas-analysis-content-to-export" class="mt-8 bg-white p-6 rounded-2xl shadow-lg">
+                     <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold">Análisis de Gastos de Gasolina</h2>
+                        <button id="export-gas-pdf-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm">Exportar a PDF</button>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <div>
+                            <label for="gas-analysis-year-filter" class="text-sm font-medium">Año:</label>
+                            <select id="gas-analysis-year-filter" class="rounded-lg border-gray-300"></select>
+                        </div>
+                        <div>
+                            <label for="gas-analysis-month-filter" class="text-sm font-medium">Mes:</label>
+                            <select id="gas-analysis-month-filter" class="rounded-lg border-gray-300"></select>
+                        </div>
+                        <div>
+                            <label for="gas-analysis-driver-filter" class="text-sm font-medium">Nombre:</label>
+                            <select id="gas-analysis-driver-filter" class="rounded-lg border-gray-300"></select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-gray-50 p-6 rounded-2xl">
+                             <h3 class="text-lg font-medium text-gray-700 mb-4 text-center">Comparativa Histórica Mensual</h3>
+                             <canvas id="gas-line-chart"></canvas>
+                        </div>
+                        <div class="bg-gray-50 p-6 rounded-2xl">
+                            <h3 class="text-lg font-medium text-gray-700 mb-4 text-center">Tabla Comparativa Mensual</h3>
+                            <div id="gas-comparison-container" class="overflow-x-auto">
+                                <!-- Tabla comparativa se inserta aquí -->
+                            </div>
+                        </div>
+                    </div>
+                     <div id="gas-charts-container" class="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                        <!-- Gráficos individuales por vehículo se insertan aquí -->
+                    </div>
+                    <div id="gas-charts-empty" class="text-center py-16 text-gray-500 hidden">
+                        <p>No hay datos suficientes para mostrar gráficos.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenido Pestaña 3: Proyecciones -->
+            <div id="projections-tab" class="tab-content">
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-semibold mb-2 text-center">Análisis de Proyecciones</h2>
+                    <div id="projections-loader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
+                    <div id="projections-content" class="hidden">
+                         <h3 class="text-xl font-semibold mb-6 text-center text-gray-700">Resumen Financiero Global</h3>
+                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                             <div class="bg-blue-50 p-6 rounded-2xl shadow-lg border border-blue-200">
+                                <h3 class="text-lg font-medium text-blue-800">Proyección Total (Histórica)</h3>
+                                <p id="total-projected" class="text-3xl font-bold text-blue-900 mt-2">$0.00</p>
+                            </div>
+                            <div class="bg-green-50 p-6 rounded-2xl shadow-lg border border-green-200">
+                                <h3 class="text-lg font-medium text-green-800">Total Recaudado (Histórico)</h3>
+                                <p id="total-collected" class="text-3xl font-bold text-green-900 mt-2">$0.00</p>
+                            </div>
+                            <div class="bg-yellow-50 p-6 rounded-2xl shadow-lg border border-yellow-200">
+                                <h3 class="text-lg font-medium text-yellow-800">Balance Pendiente (Activos)</h3>
+                                <p id="total-pending-balance" class="text-3xl font-bold text-yellow-900 mt-2">$0.00</p>
+                            </div>
+                             <div class="bg-indigo-50 p-6 rounded-2xl shadow-lg border border-indigo-200">
+                                <h3 class="text-lg font-medium text-indigo-800">Ingreso Mensual Esperado</h3>
+                                <p id="expected-monthly-income" class="text-3xl font-bold text-indigo-900 mt-2">$0.00</p>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-6 text-center mt-12 text-gray-700">Análisis Gráfico</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="bg-gray-50 p-6 rounded-2xl">
+                                <h3 class="text-lg font-medium text-gray-700 mb-4 text-center">Comparativa de Ingresos Mensuales (Año Actual)</h3>
+                                <canvas id="monthlyComparisonChart"></canvas>
+                            </div>
+                            <div class="bg-gray-50 p-6 rounded-2xl">
+                                <h3 class="text-lg font-medium text-gray-700 mb-4 text-center">Comparativa de Ingresos Anuales</h3>
+                                <canvas id="yearlyComparisonChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="text-center mt-8 text-sm text-gray-500">
+        </footer>
+    </div>
+    
+    <!-- Modales -->
+    <div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
+    <div id="payments-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
+    <div id="invoice-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
+    <div id="auth-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
+
+
+    <script>
+        // --- Configuración y Variables Globales ---
+        let allStudentsCache = [];
+        let allGasRecordsCache = [];
+        let gasChartInstances = {};
+        let gasLineChartInstance = null;
+        let monthlyComparisonChartInstance, yearlyComparisonChartInstance;
+        let monthlyReportCache = [];
+
+        const drivers = [
+            { name: 'Seleccione un nombre...', card: '' , isViaticos: false},
+            { name: "Lic. Armando", card: "1382", isViaticos: false },
+            { name: "Escolta Gaby (Israel)", card: "", isViaticos: false },
+            { name: "Escolta Dr Conde (Mauricio)", card: "1408", isViaticos: false },
+            { name: "Escolta Tere (Alba)", card: "8712", isViaticos: false },
+            { name: "Gerardo Lozano", card: "1424", isViaticos: false },
+            { name: "Antonio Lozano", card: "1432", isViaticos: false },
+            { name: "Dr Olivares (Luis)", card: "1457", isViaticos: false },
+            { name: "Gaby (Richard)", card: "1390", isViaticos: false },
+            { name: "Armando", card: "", isViaticos: false },
+            { name: "Don Boni", card: "8217", isViaticos: false },
+            { name: "Viáticos", card: "0362", isViaticos: true },
+        ];
+
+        const cars = [
+            { model: 'Seleccione un auto...', brand: '' },
+            { model: "THUNDERBIRD", brand: "FORD" },
+            { model: "NAVIGATOR", brand: "LINCOLN" },
+            { model: "GLE COUPÉ", brand: "MERCEDES BENZ" },
+            { model: "MUSTANG ROJO", brand: "FORD" },
+            { model: "SUBURBAN HIGH COUNTRY G", brand: "CHEVROLET" },
+            { model: "SIENNA", brand: "TOYOTA" },
+            { model: "HIGHLANDER", brand: "TOYOTA" },
+            { model: "SENTRA", brand: "NISSAN" },
+            { model: "SUBURBAN GRIS", brand: "CHEVROLET" },
+            { model: "RAV4 BLANCA", brand: "TOYOTA" },
+            { model: "RAV4 AZUL", brand: "TOYOTA" },
+            { model: "DURANGO", brand: "DODGE" },
+            { model: "ALTIMA", brand: "NISSAN" },
+            { model: "MOTOS DE ACUÁTICAS", brand: "-" },
+            { model: "PODADORA", brand: "-" },
+        ];
+
+        const programsByInstitution = {
+            UDC: {
+                'Médicas': [
+                    'Maestría en Medicina Estética y Longevidad'
+                ],
+                'No Médicas': [
+                    'Técnico Superior Universitario',
+                    'Licenciatura en Derecho',
+                    'Licenciatura en Pedagogía',
+                    'Licenciatura en Contaduría Pública',
+                    'Licenciatura en Administración de Empresas',
+                    'Maestría en Criminología',
+                    'Maestría en Educación',
+                    'Maestría en Derecho Procesal Penal',
+                    'Maestría en Administración y Dirección de Empresas',
+                    'Doctorado en Administración Pública',
+                    'Doctorado en Educación'
+                ]
+            },
+            IESM: {
+                'Médicas': [
+                    'Maestría en Cirugía Estética'
+                ],
+                'No Médicas': []
+            }
+        };
+
+        // --- Selectores del DOM ---
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const addStudentForm = document.getElementById('add-student-form');
+        const monthFilter = document.getElementById('month-filter');
+        const yearFilter = document.getElementById('year-filter');
+        const programFilter = document.getElementById('program-filter');
+        const studentInstitutionSelect = document.getElementById('student-institution');
+        const studentProgramSelect = document.getElementById('student-program');
+        const paidInFullCheckbox = document.getElementById('paid-in-full-checkbox');
+        const monthlyPaymentSection = document.getElementById('monthly-payment-section');
+        const paidInFullDetails = document.getElementById('paid-in-full-details');
+        const exportCsvBtn = document.getElementById('export-csv-btn');
+        const regularMonthlyAmountInput = document.getElementById('regular-monthly-amount');
+        const scholarshipPercentageInput = document.getElementById('scholarship-percentage');
+        const monthlyAmountDisplay = document.getElementById('monthly-amount');
+        const loginWrapper = document.getElementById('login-wrapper');
+        const appWrapper = document.getElementById('app-wrapper');
+        const loginForm = document.getElementById('login-form');
+        const monthlyProgressContainer = document.getElementById('monthly-progress-container');
+        const addGasForm = document.getElementById('add-gas-form');
+        const gasDriverSelect = document.getElementById('gas-driver-select');
+        const gasModelSelect = document.getElementById('gas-model-select');
+        const gasViaticosDetails = document.getElementById('gas-viaticos-details');
+        const gasAnalysisYearFilter = document.getElementById('gas-analysis-year-filter');
+        const gasAnalysisMonthFilter = document.getElementById('gas-analysis-month-filter');
+        const gasAnalysisDriverFilter = document.getElementById('gas-analysis-driver-filter');
+
+
+        // --- Funciones de Utilidad ---
+        function formatCurrency(value) {
+            if (typeof value !== 'number') {
+                value = parseFloat(value) || 0;
+            }
+            return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+        }
+        
+        function calculateDiscountedAmount() {
+            const regularAmount = parseFloat(regularMonthlyAmountInput.value) || 0;
+            const scholarship = parseFloat(scholarshipPercentageInput.value) || 0;
+            const discount = regularAmount * (scholarship / 100);
+            const finalAmount = regularAmount - discount;
+            monthlyAmountDisplay.value = formatCurrency(finalAmount);
+        }
+        
+        function calculateGasIva() {
+            const subtotal = parseFloat(document.getElementById('gas-subtotal').value) || 0;
+            const iva = subtotal * 0.16;
+            document.getElementById('gas-iva').value = formatCurrency(iva);
+        }
+
+        // --- Lógica de Datos (LocalStorage) ---
+        function loadDataFromLocalStorage() {
+            const studentsData = localStorage.getItem('studentsDB');
+            allStudentsCache = studentsData ? JSON.parse(studentsData) : [];
+            const gasData = localStorage.getItem('gasDB');
+            allGasRecordsCache = gasData ? JSON.parse(gasData) : [];
+        }
+
+        function saveDataToLocalStorage() {
+            localStorage.setItem('studentsDB', JSON.stringify(allStudentsCache));
+            localStorage.setItem('gasDB', JSON.stringify(allGasRecordsCache));
+        }
+
+        // --- Lógica de Login ---
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-pass').value;
+            const errorEl = document.getElementById('login-error');
+
+            if (user === 'Dulce' && pass === '1234') {
+                loginWrapper.classList.add('hidden');
+                appWrapper.classList.remove('hidden');
+                initializeAppLogic(); // Start the app *after* successful login
+            } else {
+                errorEl.classList.remove('hidden');
+            }
+        });
+
+        // --- Inicialización ---
+        function initializeAppLogic() {
+            setupFilters();
+            setupGasAnalysisFilters();
+            updateProgramOptions(); // Initial call
+            setupGasForm();
+            document.getElementById('student-start-date').valueAsDate = new Date(); // Set default start date
+
+            loadDataFromLocalStorage();
+            renderAllTabs();
+
+            monthFilter.addEventListener('change', renderMonthlyReport);
+            yearFilter.addEventListener('change', renderMonthlyReport);
+            programFilter.addEventListener('change', renderMonthlyReport);
+            gasAnalysisYearFilter.addEventListener('change', renderGasTab);
+            gasAnalysisMonthFilter.addEventListener('change', renderGasTab);
+            gasAnalysisDriverFilter.addEventListener('change', renderGasTab);
+            studentInstitutionSelect.addEventListener('change', updateProgramOptions);
+            paidInFullCheckbox.addEventListener('change', togglePaidInFull);
+            exportCsvBtn.addEventListener('click', exportMonthlyReportToCSV);
+            addStudentForm.addEventListener('submit', addStudentFormSubmit);
+            addGasForm.addEventListener('submit', addGasFormSubmit);
+            regularMonthlyAmountInput.addEventListener('input', calculateDiscountedAmount);
+            scholarshipPercentageInput.addEventListener('input', calculateDiscountedAmount);
+            document.getElementById('gas-subtotal').addEventListener('input', calculateGasIva);
+
+            
+            const gasUploadBtn = document.getElementById('gas-upload-btn');
+            const gasFileInput = document.getElementById('gas-file');
+            gasUploadBtn.addEventListener('click', () => gasFileInput.click());
+            gasFileInput.addEventListener('change', () => {
+                const file = gasFileInput.files[0];
+                const gasFileNameSpan = document.getElementById('gas-file-name');
+                if (file) {
+                    if (file.size > 1024 * 1024) { // 1MB limit
+                        gasFileNameSpan.textContent = 'Error: Archivo > 1MB';
+                        gasFileNameSpan.classList.add('text-red-500');
+                        gasFileInput.value = '';
+                    } else {
+                        gasFileNameSpan.textContent = file.name;
+                        gasFileNameSpan.classList.remove('text-red-500');
+                    }
+                } else {
+                    gasFileNameSpan.textContent = '';
+                }
+            });
+            document.getElementById('export-gas-pdf-btn').addEventListener('click', exportGasAnalysisToPDF);
+        }
+        
+        // --- Lógica de Gasolina ---
+        function setupGasForm() {
+            gasDriverSelect.innerHTML = drivers.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+            gasModelSelect.innerHTML = cars.map(c => `<option value="${c.model}">${c.model}</option>`).join('');
+            
+            gasDriverSelect.addEventListener('change', () => {
+                const selectedDriverName = gasDriverSelect.value;
+                const driverData = drivers.find(d => d.name === selectedDriverName);
+                
+                const gasCardInput = document.getElementById('gas-card');
+                
+                gasCardInput.value = driverData ? driverData.card : '';
+                
+                if (driverData && driverData.isViaticos) {
+                    gasViaticosDetails.classList.remove('hidden');
+                    gasCardInput.readOnly = false;
+                    gasCardInput.classList.replace('bg-gray-200', 'bg-gray-50');
+                    
+                    gasModelSelect.value = 'Seleccione un auto...';
+                    gasModelSelect.dispatchEvent(new Event('change'));
+                } else {
+                    gasViaticosDetails.classList.add('hidden');
+                    gasCardInput.readOnly = true;
+                    gasCardInput.classList.replace('bg-gray-50', 'bg-gray-200');
+                }
+            });
+
+            gasModelSelect.addEventListener('change', () => {
+                const selectedModelName = gasModelSelect.value;
+                const carData = cars.find(c => c.model === selectedModelName);
+                document.getElementById('gas-brand').value = carData ? carData.brand : '';
+            });
+
+            gasDriverSelect.dispatchEvent(new Event('change'));
+            gasModelSelect.dispatchEvent(new Event('change'));
+        }
+        
+        async function addGasFormSubmit(e) {
+            e.preventDefault();
+            if (!await validateAction()) return;
+            
+            const fileInput = document.getElementById('gas-file');
+            let pdfData = null;
+            if (fileInput.files[0]) {
+                try {
+                    pdfData = await fileToBase64(fileInput.files[0]);
+                } catch(err) {
+                    console.error("Error converting file", err);
+                    alert("Hubo un error al procesar el archivo de la factura.");
+                    return;
+                }
+            }
+
+            let driverName = document.getElementById('gas-driver-select').value;
+            const driverData = drivers.find(d => d.name === driverName);
+            if (driverData && driverData.isViaticos) {
+                const viaticosFor = document.getElementById('gas-viaticos-name').value;
+                if (viaticosFor) {
+                    driverName = `Viáticos (${viaticosFor})`;
+                }
+            }
+
+            const newRecord = {
+                id: 'gas_' + Date.now() + Math.random(),
+                vehicleName: driverName,
+                card: document.getElementById('gas-card').value,
+                brand: document.getElementById('gas-brand').value,
+                model: document.getElementById('gas-model-select').value,
+                date: document.getElementById('gas-date').value,
+                quantity: parseFloat(document.getElementById('gas-quantity').value),
+                price: parseFloat(document.getElementById('gas-price').value),
+                subtotal: parseFloat(document.getElementById('gas-subtotal').value),
+                iva: (parseFloat(document.getElementById('gas-subtotal').value) || 0) * 0.16,
+                total: parseFloat(document.getElementById('gas-total').value),
+                pdfData: pdfData,
+            };
+
+            allGasRecordsCache.push(newRecord);
+            saveDataToLocalStorage();
+            renderGasTab();
+            addGasForm.reset();
+            gasDriverSelect.dispatchEvent(new Event('change'));
+            document.getElementById('gas-file-name').textContent = '';
+        }
+
+
+        function togglePaidInFull() {
+            if (paidInFullCheckbox.checked) {
+                monthlyPaymentSection.classList.add('hidden');
+                paidInFullDetails.classList.remove('hidden');
+                document.getElementById('regular-monthly-amount').required = false;
+                document.getElementById('installments-number').required = false;
+                document.getElementById('total-cost').required = true;
+                document.getElementById('program-duration').required = true;
+            } else {
+                monthlyPaymentSection.classList.remove('hidden');
+                paidInFullDetails.classList.add('hidden');
+                document.getElementById('regular-monthly-amount').required = true;
+                document.getElementById('installments-number').required = true;
+                document.getElementById('total-cost').required = false;
+                document.getElementById('program-duration').required = false;
+            }
+        }
+
+        function updateProgramOptions() {
+            const selectedInstitution = studentInstitutionSelect.value;
+            const programs = programsByInstitution[selectedInstitution];
+            studentProgramSelect.innerHTML = '';
+
+            for (const group in programs) {
+                if(programs[group].length > 0) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = group;
+                    programs[group].forEach(programName => {
+                        const option = document.createElement('option');
+                        option.value = programName;
+                        option.textContent = programName;
+                        optgroup.appendChild(option);
+                    });
+                    studentProgramSelect.appendChild(optgroup);
+                }
+            }
+        }
+
+        function setupFilters() {
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            
+            monthFilter.innerHTML = '<option value="Todos">Todos</option>' + months.map((month, index) => `<option value="${index}" ${index === currentMonth ? 'selected' : ''}>${month}</option>`).join('');
+            
+            let yearOptions = '<option value="Todos">Todos</option>';
+            for (let i = currentYear - 15; i <= currentYear + 5; i++) {
+                yearOptions += `<option value="${i}" ${i === currentYear ? 'selected' : ''}>${i}</option>`;
+            }
+            yearFilter.innerHTML = yearOptions;
+        }
+
+        function setupGasAnalysisFilters() {
+            const gasAnalysisMonthFilter = document.getElementById('gas-analysis-month-filter');
+            const gasAnalysisDriverFilter = document.getElementById('gas-analysis-driver-filter');
+            
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            
+            gasAnalysisMonthFilter.innerHTML = '<option value="Todos">Todos los Meses</option>' + months.map((month, index) => `<option value="${index}">${month}</option>`).join('');
+            
+            let yearOptions = '<option value="Todos">Histórico</option>';
+            const yearsInRecords = [...new Set(allGasRecordsCache.map(rec => new Date(rec.date).getFullYear()))].sort((a,b) => b-a);
+            
+            if (yearsInRecords.length === 0) {
+                yearsInRecords.push(currentYear);
+            }
+            
+            yearsInRecords.forEach(year => {
+                 yearOptions += `<option value="${year}" ${year === currentYear ? 'selected' : ''}>${year}</option>`;
+            });
+
+            gasAnalysisYearFilter.innerHTML = yearOptions;
+
+            const driverNames = [...new Set(allGasRecordsCache.map(rec => rec.vehicleName))].sort();
+            gasAnalysisDriverFilter.innerHTML = '<option value="Todos">Todos los Nombres</option>' + driverNames.map(name => `<option value="${name}">${name}</option>`).join('');
+        }
+
+        // --- Lógica de Pestañas ---
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active', 'text-blue-600', 'border-blue-600'));
+                button.classList.add('active', 'text-blue-600', 'border-blue-600');
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(`${button.dataset.tab}-tab`).classList.add('active');
+            });
+        });
+        
+        function renderAllTabs() {
+            const programs = [...new Set(allStudentsCache.map(s => s.program))].sort();
+            const currentProgramFilterValue = programFilter.value;
+            programFilter.innerHTML = '<option value="Todos">Todos los Programas</option>' + programs.map(p => `<option value="${p}">${p}</option>`).join('');
+            if ([...programFilter.options].map(o => o.value).includes(currentProgramFilterValue)) {
+                programFilter.value = currentProgramFilterValue;
+            }
+
+            renderDashboard();
+            renderStudentsList();
+            setupGasAnalysisFilters(); // Update filters before rendering gas tab
+            renderGasTab();
+            renderProjections();
+            renderMonthlyReport();
+            document.querySelectorAll('#dashboard-loader, #students-loader, #projections-loader').forEach(el => el.classList.add('hidden'));
+        }
+
+        // --- Renderizado de Pestañas ---
+        function renderDashboard() {
+            const dashboardContent = document.getElementById('dashboard-content');
+            const generationContent = document.getElementById('generation-dashboard-content');
+            const emptyEl = document.getElementById('dashboard-empty');
+            if (allStudentsCache.length === 0) {
+                dashboardContent.innerHTML = '';
+                generationContent.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+            emptyEl.classList.add('hidden');
+
+            const programSummary = allStudentsCache.reduce((acc, student) => {
+                const program = student.program || 'Sin Programa';
+                if (!acc[program]) {
+                    acc[program] = { totalContracted: 0, totalPaid: 0, activeContracted: 0, inactiveContracted: 0 };
+                }
+                const studentTotal = parseFloat(student.totalCost || 0);
+                const studentPaid = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+                
+                acc[program].totalContracted += studentTotal;
+                acc[program].totalPaid += studentPaid;
+                if(student.status === 'active'){
+                    acc[program].activeContracted += studentTotal;
+                } else {
+                    acc[program].inactiveContracted += studentTotal;
+                }
+                return acc;
+            }, {});
+
+            dashboardContent.innerHTML = Object.entries(programSummary).map(([program, data]) => {
+                const activePending = data.activeContracted - data.totalPaid;
+                return `
+                    <div class="bg-white p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-lg font-bold text-gray-800 truncate">${program}</h3>
+                        <div class="mt-4 space-y-2">
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Contratado (Activos):</span> <span class="font-medium">${formatCurrency(data.activeContracted)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Contratado (Bajas):</span> <span class="font-medium text-gray-400">${formatCurrency(data.inactiveContracted)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-green-600">Total Pagado:</span> <span class="font-medium text-green-600">${formatCurrency(data.totalPaid)}</span></div>
+                            <div class="flex justify-between text-sm font-bold"><span class="text-yellow-600">Balance Pendiente (Activos):</span> <span class="text-yellow-600">${formatCurrency(activePending > 0 ? activePending : 0)}</span></div>
+                        </div>
+                    </div>`;
+            }).join('');
+            
+            const generationSummary = allStudentsCache.reduce((acc, student) => {
+                const generation = student.generation || 'Sin Generación';
+                if (!acc[generation]) acc[generation] = {};
+                
+                const program = student.program || 'Sin Programa';
+                if(!acc[generation][program]) acc[generation][program] = { totalContracted: 0, totalPaid: 0 };
+                
+                acc[generation][program].totalContracted += parseFloat(student.totalCost || 0);
+                const paid = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+                acc[generation][program].totalPaid += paid;
+                
+                return acc;
+            }, {});
+
+            generationContent.innerHTML = Object.entries(generationSummary).map(([generation, programs]) => {
+                let programHTML = Object.entries(programs).map(([program, data]) => {
+                    const pending = data.totalContracted - data.totalPaid;
+                    return `<div class="mt-2 pt-2 border-t">
+                                <h4 class="font-semibold text-gray-700">${program}</h4>
+                                <div class="flex justify-between text-xs mt-1"><span class="text-gray-500">Contratado:</span> <span class="font-medium">${formatCurrency(data.totalContracted)}</span></div>
+                                <div class="flex justify-between text-xs"><span class="text-green-600">Pagado:</span> <span class="font-medium text-green-600">${formatCurrency(data.totalPaid)}</span></div>
+                                <div class="flex justify-between text-xs"><span class="text-yellow-600">Pendiente:</span> <span class="font-medium text-yellow-600">${formatCurrency(pending)}</span></div>
+                            </div>`;
+                }).join('');
+
+                return `
+                    <div class="bg-white p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-xl font-bold text-gray-800 truncate">Generación: ${generation}</h3>
+                        ${programHTML}
+                    </div>`;
+            }).join('');
+        }
+
+        function renderStudentsList() {
+            const tableBody = document.getElementById('students-table-body');
+            const container = document.getElementById('students-list-container');
+            const emptyEl = document.getElementById('students-empty');
+            container.classList.remove('hidden');
+            
+            if (allStudentsCache.length === 0) {
+                tableBody.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+            emptyEl.classList.add('hidden');
+
+            tableBody.innerHTML = allStudentsCache.map(student => {
+                const totalPaid = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+                const totalCost = parseFloat(student.totalCost || 0);
+                const percentage = totalCost > 0 ? (totalPaid / totalCost) * 100 : 0;
+                const isActive = student.status === 'active';
+                const endDate = student.programEndDate ? new Date(student.programEndDate).toLocaleDateString() : 'N/A';
+                const hasScholarship = (student.scholarship || 0) > 0;
+
+                return `
+                    <tr class="hover:bg-gray-50 ${!isActive ? 'student-inactive' : ''}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${student.name} ${hasScholarship ? `<span class="text-xs font-bold text-blue-600 bg-blue-100 py-0.5 px-2 rounded-full">BECADO</span>` : ''}</div>
+                            <div class="text-xs text-gray-500 mt-1">Fin: ${endDate}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-500">${student.generation}</div></td>
+                        <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-500">${student.institution}</div></td>
+                        <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-500">${student.program}</div></td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${formatCurrency(totalPaid)} / ${formatCurrency(totalCost)}</div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${percentage}%"></div></div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                            <button class="manage-payments-btn text-blue-600 hover:text-blue-900" data-id="${student.id}">Pagos</button>
+                            <button class="toggle-status-btn text-xs font-semibold py-1 px-2 rounded-md ${isActive ? 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200' : 'text-green-700 bg-green-100 hover:bg-green-200'}" data-id="${student.id}">${isActive ? 'Dar de Baja' : 'Reactivar'}</button>
+                            <button class="delete-btn text-red-600 hover:text-red-900" data-id="${student.id}">Eliminar</button>
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function renderProjections() {
+            const content = document.getElementById('projections-content');
+            content.classList.remove('hidden');
+            
+            let totalProjected = 0, totalCollected = 0, expectedMonthly = 0;
+            const monthlyData = {}; // { 'YYYY-MM': collected }
+            const yearlyData = {}; // { 'YYYY': collected }
+            const currentMonthKey = new Date().toISOString().slice(0, 7);
+
+
+            allStudentsCache.forEach(student => {
+                const totalCost = parseFloat(student.totalCost || 0);
+                const paidAmount = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+
+                totalProjected += totalCost;
+                totalCollected += paidAmount;
+                
+                if (student.status === 'active' && paidAmount < totalCost) {
+                    const monthKey = new Date(student.createdAt).toISOString().slice(0, 7);
+                    if(monthKey === currentMonthKey) {
+                        expectedMonthly += parseFloat(student.monthlyAmount || 0);
+                    }
+                }
+
+                (student.installmentsList || []).forEach(p => {
+                    if (p.status === 'paid' && p.paymentDate) {
+                        const date = new Date(p.paymentDate);
+                        const year = date.getUTCFullYear();
+                        const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+                        const yearMonth = `${year}-${month}`;
+
+                        monthlyData[yearMonth] = (monthlyData[yearMonth] || 0) + p.amount;
+                        yearlyData[year] = (yearlyData[year] || 0) + p.amount;
+                    }
+                });
+            });
+
+            const totalPending = allStudentsCache.filter(s => s.status === 'active').reduce((sum, s) => sum + (s.totalCost - (s.installmentsList || []).filter(p => p.status === 'paid').reduce((pSum, p) => pSum + p.amount, 0)), 0);
+
+            document.getElementById('total-projected').textContent = formatCurrency(totalProjected);
+            document.getElementById('total-collected').textContent = formatCurrency(totalCollected);
+            document.getElementById('total-pending-balance').textContent = formatCurrency(totalPending);
+            document.getElementById('expected-monthly-income').textContent = formatCurrency(expectedMonthly);
+            
+            // Monthly Comparison Chart
+            const monthlyCtx = document.getElementById('monthlyComparisonChart').getContext('2d');
+            const currentYear = new Date().getFullYear();
+            const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            const monthlyChartData = months.map((_, i) => {
+                const monthKey = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`;
+                return monthlyData[monthKey] || 0;
+            });
+
+            if(monthlyComparisonChartInstance) monthlyComparisonChartInstance.destroy();
+            monthlyComparisonChartInstance = new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: `Ingresos Recaudados ${currentYear}`,
+                        data: monthlyChartData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return formatCurrency(context.parsed.y);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Yearly Comparison Chart
+            const yearlyCtx = document.getElementById('yearlyComparisonChart').getContext('2d');
+            const sortedYears = Object.keys(yearlyData).sort();
+            const yearlyChartLabels = sortedYears;
+            const yearlyChartData = sortedYears.map(year => yearlyData[year]);
+            
+            if(yearlyComparisonChartInstance) yearlyComparisonChartInstance.destroy();
+            yearlyComparisonChartInstance = new Chart(yearlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: yearlyChartLabels,
+                    datasets: [{
+                        label: 'Ingresos Recaudados por Año',
+                        data: yearlyChartData,
+                        backgroundColor: 'rgba(22, 163, 74, 0.7)',
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    scales: { y: { beginAtZero: true } },
+                     plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return formatCurrency(context.parsed.y);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+        }
+
+        function renderMonthlyReport() {
+            const reportTableBody = document.getElementById('monthly-report-table-body');
+            reportTableBody.innerHTML = '<tr><td colspan="5" class="text-center p-8 text-gray-500">Cargando reporte...</td></tr>';
+        
+            const selectedMonth = monthFilter.value;
+            const selectedYear = yearFilter.value;
+            const selectedProgram = programFilter.value;
+
+            if(selectedMonth !== 'Todos' || selectedYear !== 'Todos') {
+                monthlyProgressContainer.classList.remove('hidden');
+            } else {
+                monthlyProgressContainer.classList.add('hidden');
+            }
+
+            const now = new Date();
+            const firstOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+            let monthlyExpected = 0;
+            let monthlyCollected = 0;
+            let reportData = [];
+
+            allStudentsCache
+            .filter(student => selectedProgram === 'Todos' || student.program === selectedProgram)
+            .forEach(student => {
+                if(student.status !== 'active' || !student.createdAt) return;
+
+                const startDate = new Date(student.createdAt);
+                
+                (student.installmentsList || []).forEach((installment, index) => {
+                    const dueDate = new Date(startDate);
+                    dueDate.setUTCMonth(startDate.getUTCMonth() + index);
+
+                    const yearMatches = selectedYear === 'Todos' || dueDate.getUTCFullYear() === parseInt(selectedYear);
+                    const monthMatches = selectedMonth === 'Todos' || dueDate.getUTCMonth() === parseInt(selectedMonth);
+
+                    if(yearMatches && monthMatches) {
+                        if(selectedMonth !== 'Todos' && selectedYear !== 'Todos') {
+                            monthlyExpected += installment.amount;
+                        }
+                        
+                        let displayStatus = installment.status;
+                        if(installment.status === 'pending' && dueDate < firstOfCurrentMonth) {
+                            displayStatus = 'overdue';
+                        }
+                        
+                        reportData.push({
+                            name: student.name,
+                            generation: student.generation,
+                            program: student.program,
+                            amount: installment.amount,
+                            dueDate: dueDate.toLocaleDateString(),
+                            status: displayStatus,
+                        });
+
+                        if(installment.status === 'paid' && monthMatches && yearMatches) {
+                           if(selectedMonth !== 'Todos' && selectedYear !== 'Todos') {
+                                monthlyCollected += installment.amount;
+                           }
+                        }
+                    }
+                });
+            });
+            
+            monthlyReportCache = reportData;
+
+            const percentage = monthlyExpected > 0 ? (monthlyCollected / monthlyExpected) * 100 : 0;
+            
+            document.getElementById('monthly-progress-circle').style.setProperty('--p', `${percentage}%`);
+            document.getElementById('monthly-progress-text').textContent = `${Math.round(percentage)}%`;
+            document.getElementById('monthly-collected').textContent = formatCurrency(monthlyCollected);
+            document.getElementById('monthly-expected').textContent = formatCurrency(monthlyExpected);
+
+            const emptyReportEl = document.getElementById('monthly-report-empty');
+            
+            if(reportData.length === 0) {
+                reportTableBody.innerHTML = '';
+                emptyReportEl.classList.remove('hidden');
+                return;
+            }
+            
+            emptyReportEl.classList.add('hidden');
+            reportTableBody.innerHTML = reportData.map(item => {
+                 let statusClass = 'bg-yellow-100 text-yellow-800';
+                 let statusText = 'Pendiente';
+                 if (item.status === 'paid') {
+                    statusClass = 'bg-green-100 text-green-800';
+                    statusText = 'Pagado';
+                 } else if (item.status === 'overdue') {
+                    statusClass = 'status-overdue animate-pulse';
+                    statusText = 'ADEUDO';
+                 }
+
+                return `<tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.generation}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(item.amount)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.dueDate}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                            ${statusText}
+                        </span>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        
+        // --- Render Gasolina Tab ---
+        function renderGasTab() {
+            const gasTableBody = document.getElementById('gas-table-body');
+            const gasEmpty = document.getElementById('gas-empty');
+            const gasChartsContainer = document.getElementById('gas-charts-container');
+            const gasChartsEmpty = document.getElementById('gas-charts-empty');
+            const gasComparisonContainer = document.getElementById('gas-comparison-container');
+            
+            const analysisYear = gasAnalysisYearFilter.value;
+            const analysisMonth = document.getElementById('gas-analysis-month-filter').value;
+            const analysisDriver = document.getElementById('gas-analysis-driver-filter').value;
+
+            
+            let filteredGasRecords = allGasRecordsCache;
+
+            if (analysisYear !== 'Todos') {
+                filteredGasRecords = filteredGasRecords.filter(rec => new Date(rec.date).getFullYear() === parseInt(analysisYear));
+            }
+             if (analysisMonth !== 'Todos') {
+                filteredGasRecords = filteredGasRecords.filter(rec => new Date(rec.date).getMonth() === parseInt(analysisMonth));
+            }
+            if (analysisDriver !== 'Todos') {
+                filteredGasRecords = filteredGasRecords.filter(rec => rec.vehicleName === analysisDriver);
+            }
+
+            if (allGasRecordsCache.length === 0) {
+                gasTableBody.innerHTML = '';
+                gasEmpty.classList.remove('hidden');
+                gasChartsContainer.innerHTML = '';
+                gasChartsEmpty.classList.remove('hidden');
+                gasComparisonContainer.innerHTML = '';
+                return;
+            }
+
+            gasEmpty.classList.add('hidden');
+            gasChartsEmpty.classList.add('hidden');
+
+            // Render Table
+            allGasRecordsCache.sort((a,b) => new Date(b.date) - new Date(a.date));
+            gasTableBody.innerHTML = allGasRecordsCache.map(rec => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${rec.vehicleName}</div>
+                        <div class="text-xs text-gray-500">${rec.model}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(rec.date).toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold text-right">${formatCurrency(rec.total)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        ${rec.pdfData ? `<button onclick="viewGasReceipt('${rec.id}')" class="text-blue-600 hover:underline">Ver Factura</button>` : '-'}
+                    </td>
+                </tr>
+            `).join('');
+
+            // Render Charts
+            const groupedByVehicle = filteredGasRecords.reduce((acc, rec) => {
+                const vehicleKey = rec.vehicleName; // Group by person/escort name
+                if (!acc[vehicleKey]) {
+                    acc[vehicleKey] = [];
+                }
+                acc[vehicleKey].push(rec);
+                return acc;
+            }, {});
+
+            gasChartsContainer.innerHTML = '';
+            const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            const currentYear = analysisYear === 'Todos' ? new Date().getFullYear() : parseInt(analysisYear);
+            
+            Object.keys(gasChartInstances).forEach(key => gasChartInstances[key].destroy());
+            gasChartInstances = {};
+
+            Object.entries(groupedByVehicle).forEach(([vehicleName, records]) => {
+                const chartId = `gas-chart-${vehicleName.replace(/[^a-zA-Z0-9]/g, '')}`;
+                const chartWrapper = document.createElement('div');
+                chartWrapper.className = 'bg-gray-50 p-4 rounded-lg';
+                chartWrapper.innerHTML = `
+                    <h3 class="text-lg font-medium text-gray-700 mb-4 text-center">${vehicleName}</h3>
+                    <canvas id="${chartId}"></canvas>
+                `;
+                gasChartsContainer.appendChild(chartWrapper);
+
+                const monthlyTotals = Array(12).fill(0);
+                records.forEach(rec => {
+                    const date = new Date(rec.date);
+                    if (date.getFullYear() === currentYear) {
+                        const month = date.getMonth();
+                        monthlyTotals[month] += rec.total;
+                    }
+                });
+
+                const ctx = document.getElementById(chartId).getContext('2d');
+                gasChartInstances[chartId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: `Gasto en ${currentYear}`,
+                            data: monthlyTotals,
+                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        }]
+                    },
+                     options: { 
+                        responsive: true, 
+                        scales: { y: { beginAtZero: true } },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return formatCurrency(context.parsed.y);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Render Comparison Line Chart
+            const gasLineCtx = document.getElementById('gas-line-chart').getContext('2d');
+            const vehicleNamesForLineChart = Object.keys(groupedByVehicle);
+            const lineChartColors = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#14b8a6', '#ec4899'];
+            
+            const lineChartDatasets = vehicleNamesForLineChart.map((vehicleName, index) => {
+                 const monthlyTotals = Array(12).fill(0);
+                 groupedByVehicle[vehicleName].forEach(rec => {
+                    const date = new Date(rec.date);
+                    if (date.getFullYear() === currentYear) {
+                        const month = date.getMonth();
+                        monthlyTotals[month] += rec.total;
+                    }
+                });
+                return {
+                    label: vehicleName,
+                    data: monthlyTotals,
+                    borderColor: lineChartColors[index % lineChartColors.length],
+                    backgroundColor: lineChartColors[index % lineChartColors.length] + '33', // with opacity
+                    fill: false,
+                    tension: 0.1
+                }
+            });
+            
+            if(gasLineChartInstance) gasLineChartInstance.destroy();
+            gasLineChartInstance = new Chart(gasLineCtx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: lineChartDatasets
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+
+            // Render Comparison Table
+            const comparisonData = {};
+            vehicleNamesForLineChart.forEach(v => comparisonData[v] = Array(12).fill(0));
+
+            filteredGasRecords.forEach(rec => {
+                 const date = new Date(rec.date);
+                 if (date.getFullYear() === currentYear) {
+                     const month = date.getMonth();
+                     const vehicleKey = rec.vehicleName;
+                     if (comparisonData[vehicleKey]) {
+                        comparisonData[vehicleKey][month] += rec.total;
+                     }
+                 }
+            });
+
+            let tableHTML = `<table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-100"><tr>
+                    <th class="px-4 py-2 text-left font-semibold">Vehículo</th>
+                    ${months.map(m => `<th class="px-4 py-2 text-right font-semibold">${m}</th>`).join('')}
+                    <th class="px-4 py-2 text-right font-bold bg-gray-200">Total Anual</th>
+                </tr></thead><tbody class="divide-y divide-gray-200">`;
+            
+            Object.entries(comparisonData).forEach(([vehicleName, monthlyTotals]) => {
+                const yearTotal = monthlyTotals.reduce((a, b) => a + b, 0);
+                if (yearTotal > 0) { // Only show vehicles with expenses this year
+                     tableHTML += `<tr>
+                        <td class="px-4 py-2 font-medium">${vehicleName}</td>
+                        ${monthlyTotals.map(t => `<td class="px-4 py-2 text-right">${t > 0 ? formatCurrency(t) : '-'}</td>`).join('')}
+                        <td class="px-4 py-2 text-right font-bold bg-gray-50">${formatCurrency(yearTotal)}</td>
+                    </tr>`;
+                }
+            });
+            tableHTML += `</tbody></table>`;
+            gasComparisonContainer.innerHTML = tableHTML;
+        }
+
+
+        // --- Lógica de Formularios y Modales ---
+        async function addStudentFormSubmit(e) {
+            e.preventDefault();
+            if(!await validateAction()) return;
+
+            const isPaidInFull = paidInFullCheckbox.checked;
+            const startDate = document.getElementById('student-start-date').value;
+            let monthlyAmount, installmentsNumber, totalCost, regularMonthly, scholarship;
+
+            if (isPaidInFull) {
+                totalCost = parseFloat(document.getElementById('total-cost').value);
+                installmentsNumber = parseInt(document.getElementById('program-duration').value, 10);
+                monthlyAmount = totalCost; // El monto de la única mensualidad es el total
+                regularMonthly = totalCost;
+                scholarship = 0;
+            } else {
+                regularMonthly = parseFloat(document.getElementById('regular-monthly-amount').value);
+                scholarship = parseFloat(document.getElementById('scholarship-percentage').value) || 0;
+                monthlyAmount = regularMonthly * (1 - scholarship / 100);
+                installmentsNumber = parseInt(document.getElementById('installments-number').value, 10);
+                totalCost = monthlyAmount * installmentsNumber;
+            }
+            
+            const endDate = new Date(startDate + 'T12:00:00Z');
+            endDate.setUTCMonth(endDate.getUTCMonth() + installmentsNumber);
+            
+            const installmentsList = [];
+            const paymentAmount = isPaidInFull ? totalCost : monthlyAmount;
+            const loopCount = isPaidInFull ? 1 : installmentsNumber;
+
+            for(let i=1; i <= loopCount; i++){
+                const isPaid = isPaidInFull;
+                installmentsList.push({ 
+                    installmentNumber: i, 
+                    amount: paymentAmount, 
+                    status: isPaid ? 'paid' : 'pending', 
+                    paymentDate: isPaid ? new Date(startDate + 'T12:00:00Z').toISOString() : null, 
+                    paymentMethod: isPaid ? 'Contado' : null,
+                    receiptData: null 
+                });
+            }
+
+            const student = {
+                id: 'student_' + Date.now() + Math.random(),
+                name: document.getElementById('student-name').value,
+                generation: document.getElementById('student-generation').value,
+                institution: document.getElementById('student-institution').value,
+                program: document.getElementById('student-program').value,
+                regularMonthlyAmount: regularMonthly,
+                scholarship: scholarship,
+                monthlyAmount: monthlyAmount,
+                totalCost: totalCost,
+                status: 'active',
+                createdAt: new Date(startDate + 'T12:00:00Z').toISOString(),
+                programEndDate: endDate.toISOString(),
+                installmentsList: installmentsList
+            };
+            
+            allStudentsCache.push(student);
+            saveDataToLocalStorage();
+            renderAllTabs();
+            addStudentForm.reset();
+            document.getElementById('student-start-date').valueAsDate = new Date();
+            togglePaidInFull();
+            calculateDiscountedAmount();
+        }
+        
+        document.getElementById('students-list-container').addEventListener('click', async (e) => {
+            const button = e.target.closest('button');
+            if(!button) return;
+            const id = button.dataset.id;
+            if(!id) return;
+
+            if (button.classList.contains('manage-payments-btn')) {
+                openPaymentsModal(id);
+                return;
+            }
+
+            if (await validateAction()) {
+                if (button.classList.contains('delete-btn')) {
+                    openDeleteModal(id)
+                }
+                if (button.classList.contains('toggle-status-btn')) {
+                     toggleStudentStatus(id);
+                }
+            }
+        });
+        
+        function toggleStudentStatus(id){
+            const student = allStudentsCache.find(s => s.id === id);
+            if(!student) return;
+            student.status = student.status === 'active' ? 'inactive' : 'active';
+            saveDataToLocalStorage();
+            renderAllTabs();
+        }
+
+        // --- Funciones de Modales ---
+        function openDeleteModal(id) {
+            const modal = document.getElementById('delete-modal');
+            modal.innerHTML = `
+                <div class="relative p-5 border w-96 shadow-lg rounded-2xl bg-white">
+                    <h3 class="text-lg font-medium text-center">Eliminar Alumno</h3>
+                    <p class="text-sm text-gray-500 text-center mt-2">¿Confirmas la eliminación de este registro? La acción es irreversible.</p>
+                    <div class="flex justify-center gap-4 mt-6">
+                        <button id="modal-cancel-btn" class="px-4 py-2 bg-gray-200 rounded-md">Cancelar</button>
+                        <button id="modal-confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-md">Eliminar</button>
+                    </div>
+                </div>`;
+            modal.classList.remove('hidden');
+            modal.querySelector('#modal-cancel-btn').onclick = () => modal.classList.add('hidden');
+            modal.querySelector('#modal-confirm-btn').onclick = async () => {
+                const studentIndex = allStudentsCache.findIndex(s => s.id === id);
+                if (studentIndex > -1) {
+                    allStudentsCache.splice(studentIndex, 1);
+                    saveDataToLocalStorage();
+                    renderAllTabs();
+                }
+                modal.classList.add('hidden');
+            };
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+        
+        window.viewGasReceipt = function(recordId) {
+            const record = allGasRecordsCache.find(rec => rec.id === recordId);
+            if (record && record.pdfData) {
+                const newWindow = window.open();
+                newWindow.document.write(`<iframe src="${record.pdfData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+            }
+        }
+
+        async function openPaymentsModal(id, editingIndex = null) {
+            const student = allStudentsCache.find(s => s.id === id);
+            if (!student) return;
+            const startDate = new Date(student.createdAt);
+            const modal = document.getElementById('payments-modal');
+            
+            const installmentsHTML = (student.installmentsList || []).map((installment, i) => {
+                const isEditing = editingIndex === i;
+
+                if (installment.status === 'paid' && !isEditing) {
+                    return `
+                    <li class="p-3 bg-green-50 rounded-md">
+                        <div class="flex justify-between items-start">
+                             <div>
+                                <p class="font-medium text-green-800">Mensualidad ${installment.installmentNumber} - Pagada</p>
+                                <p class="text-xs text-gray-500">Fecha: ${new Date(installment.paymentDate).toLocaleDateString()} | Método: ${installment.paymentMethod || 'N/A'}</p>
+                                ${installment.receiptData ? `<a href="${installment.receiptData}" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-500 hover:underline">Ver Comprobante</a>` : ''}
+                            </div>
+                            <div class="flex items-center gap-2">
+                                 <button class="edit-payment-btn text-xs text-yellow-600 hover:text-yellow-800" data-id="${id}" data-index="${i}">Editar</button>
+                                 <button class="generate-invoice-btn text-xs text-gray-600 hover:text-blue-600" data-id="${id}" data-index="${i}">Recibo</button>
+                            </div>
+                        </div>
+                    </li>`;
+                } 
+                
+                const dueDate = new Date(startDate);
+                dueDate.setUTCMonth(startDate.getUTCMonth() + i);
+                const dueDateString = dueDate.toISOString().split('T')[0];
+                const paymentDate = installment.paymentDate ? new Date(installment.paymentDate).toISOString().split('T')[0] : dueDateString;
+                const paymentMethod = installment.paymentMethod || 'Transferencia';
+
+                return `
+                <li class="p-3 ${isEditing ? 'bg-yellow-50 ring-2 ring-yellow-400' : 'bg-gray-50'} rounded-md">
+                    <div class="flex justify-between items-center">
+                        <p class="font-medium">Mensualidad ${installment.installmentNumber} - <span class="${isEditing ? 'text-green-700' : 'text-yellow-700'}">${isEditing ? 'Editando' : 'Pendiente'}</span></p>
+                        <p class="font-bold">${formatCurrency(installment.amount)}</p>
+                    </div>
+                    <div class="mt-3 space-y-2">
+                         <input type="date" class="payment-date-input w-full border-gray-300 rounded-md p-2 text-sm" data-index="${i}" value="${paymentDate}">
+                         <select class="payment-method-input w-full border-gray-300 rounded-md p-2 text-sm" data-index="${i}">
+                            <option value="Transferencia" ${paymentMethod === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
+                            <option value="Tarjeta" ${paymentMethod === 'Tarjeta' ? 'selected' : ''}>Tarjeta</option>
+                            <option value="Efectivo" ${paymentMethod === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
+                         </select>
+                         <input type="file" class="receipt-file-input hidden" data-index="${i}" accept="image/*,.pdf">
+                         <button class="upload-btn w-full text-sm border border-gray-300 py-1.5 rounded-md" data-index="${i}">${isEditing ? 'Cambiar Comprobante' : 'Adjuntar Comprobante'}</button>
+                         <span class="file-name-span text-xs text-gray-500 block" data-index="${i}">${installment.receiptData ? '(Archivo actual guardado)' : ''}</span>
+                         ${isEditing 
+                            ? `<div class="flex gap-2">
+                                <button class="cancel-edit-btn w-full bg-gray-500 text-white py-2 rounded-lg" data-id="${id}">Cancelar</button>
+                                <button class="save-payment-btn w-full bg-blue-600 text-white py-2 rounded-lg" data-id="${id}" data-index="${i}">Guardar</button>
+                               </div>`
+                            : `<button class="register-payment-btn w-full bg-green-600 text-white py-2 rounded-lg" data-id="${id}" data-index="${i}">Registrar Pago</button>`
+                         }
+                    </div>
+                </li>`;
+
+            }).join('');
+            
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+                    <div class="p-6 border-b"><h3 class="text-xl font-bold">${student.name}</h3><p class="text-sm text-gray-500">${student.institution} - ${student.program}</p></div>
+                    <div class="p-6 overflow-y-auto"><ul class="space-y-3">${installmentsHTML}</ul></div>
+                    <div class="p-4 bg-gray-50 text-right border-t"><button class="close-modal-btn px-4 py-2 bg-gray-200 rounded-md">Cerrar</button></div>
+                </div>`;
+
+            modal.classList.remove('hidden');
+            modal.querySelector('.close-modal-btn').onclick = () => modal.classList.add('hidden');
+            
+            const modalContent = modal.querySelector('.overflow-y-auto');
+
+            modalContent.addEventListener('click', async (e) => {
+                const target = e.target;
+                
+                if (target.classList.contains('upload-btn')) {
+                    const index = target.dataset.index;
+                    modal.querySelector(`.receipt-file-input[data-index='${index}']`).click();
+                    return;
+                }
+                
+                if (!target.dataset.id) return;
+                
+                const studentId = target.dataset.id;
+                const index = parseInt(target.dataset.index, 10);
+                
+                if (target.classList.contains('edit-payment-btn')) {
+                    if (await validateAction()) openPaymentsModal(studentId, index);
+                }
+                else if (target.classList.contains('cancel-edit-btn')) {
+                    openPaymentsModal(studentId, null);
+                }
+                else if (target.classList.contains('register-payment-btn') || target.classList.contains('save-payment-btn')) {
+                    if (!await validateAction()) return;
+                    
+                    const date = modal.querySelector(`.payment-date-input[data-index='${index}']`).value;
+                    const method = modal.querySelector(`.payment-method-input[data-index='${index}']`).value;
+                    const fileInput = modal.querySelector(`.receipt-file-input[data-index='${index}']`);
+                    const studentToUpdate = allStudentsCache.find(s => s.id === studentId);
+                    const updatedInstallments = [...studentToUpdate.installmentsList];
+                    let receiptData = updatedInstallments[index].receiptData || null;
+
+                    if (fileInput.files[0]) {
+                        try {
+                            receiptData = await fileToBase64(fileInput.files[0]);
+                        } catch(err) { console.error("Error converting file", err); return; }
+                    }
+                    
+                    updatedInstallments[index].status = 'paid';
+                    updatedInstallments[index].paymentDate = new Date(date + 'T12:00:00Z').toISOString();
+                    updatedInstallments[index].paymentMethod = method;
+                    updatedInstallments[index].receiptData = receiptData;
+                    
+                    const studentIndex = allStudentsCache.findIndex(s => s.id === studentId);
+                    allStudentsCache[studentIndex].installmentsList = updatedInstallments;
+                    saveDataToLocalStorage();
+                    
+                    if(target.classList.contains('save-payment-btn')) {
+                        openPaymentsModal(studentId, null);
+                    } else {
+                        // Notificación automática a administración
+                        sendEmailNotification(studentToUpdate, updatedInstallments[index]);
+                    }
+                    renderAllTabs();
+                    openPaymentsModal(studentId, null); // Re-render modal
+                }
+                else if (target.classList.contains('generate-invoice-btn')) {
+                    generateInvoice(studentId, index);
+                }
+            });
+
+            modal.querySelectorAll('.receipt-file-input').forEach(input => {
+                input.onchange = () => {
+                   const file = input.files[0];
+                   const span = modal.querySelector(`.file-name-span[data-index='${input.dataset.index}']`);
+                   if(file) {
+                       if(file.size > 1024 * 1024) { // 1MB limit
+                           span.textContent = 'Error: Archivo muy grande (> 1MB)';
+                           span.classList.add('text-red-500');
+                           input.value = ''; // Clear the input
+                       } else {
+                           span.textContent = file.name;
+                           span.classList.remove('text-red-500');
+                       }
+                   } else {
+                       span.textContent = '';
+                   }
+                };
+            });
+        }
+        
+        async function downloadInvoiceAsPDF(student, installment) {
+            const { jsPDF } = window.jspdf;
+            const invoiceElement = document.getElementById('invoice-content');
+            
+            invoiceElement.style.backgroundColor = 'white';
+            const canvas = await html2canvas(invoiceElement, { scale: 2 });
+            invoiceElement.style.backgroundColor = '';
+            const imgData = canvas.toDataURL('image/png');
+            
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.save(`recibo-${student.name.replace(/ /g, '_')}-mensualidad_${installment.installmentNumber}.pdf`);
+        }
+
+        function generateInvoice(studentId, paymentIndex) {
+            const student = allStudentsCache.find(s => s.id === studentId);
+            const installment = student?.installmentsList?.[paymentIndex];
+            if (!student || !installment) return;
+
+            const modal = document.getElementById('invoice-modal');
+
+            const hasScholarship = (student.scholarship || 0) > 0;
+            let subtotal = student.regularMonthlyAmount;
+            let discountAmount = 0;
+            if(hasScholarship){
+                discountAmount = student.regularMonthlyAmount * (student.scholarship / 100);
+            }
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+                    <div id="invoice-content" class="p-10 bg-white text-gray-800 font-sans">
+                        <div class="flex justify-between items-start mb-8">
+                            <div>
+                                <svg class="h-10 w-auto text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5-10-5-10 5z" /></svg>
+                                <h1 class="text-2xl font-bold text-gray-900 mt-2">${student.institution}</h1>
+                            </div>
+                            <div class="text-right">
+                                <h2 class="text-3xl font-bold text-gray-400 uppercase tracking-widest">Factura</h2>
+                                <p class="text-sm text-gray-500 mt-1">#${student.id.slice(0,6).toUpperCase()}-${installment.installmentNumber}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-8 mb-10">
+                            <div class="text-sm">
+                                <p class="font-bold text-gray-700">De:</p>
+                                <p>${student.institution}</p>
+                                <p>Calle Ficticia 123</p>
+                                <p>Veracruz, México</p>
+                            </div>
+                             <div class="text-sm text-right">
+                                <p class="font-bold text-gray-700">Cobrar a:</p>
+                                <p>${student.name}</p>
+                                <p>Generación: ${student.generation}</p>
+                                <p>Programa: ${student.program}</p>
+                             </div>
+                        </div>
+
+                        <table class="w-full text-sm">
+                            <thead class="bg-blue-600 text-white">
+                                <tr>
+                                    <th class="text-left font-semibold p-3">Descripción</th>
+                                    <th class="text-center font-semibold p-3">Cantidad</th>
+                                    <th class="text-right font-semibold p-3">Precio Unit.</th>
+                                    <th class="text-right font-semibold p-3">Importe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b">
+                                    <td class="p-3">Pago de Mensualidad ${installment.installmentNumber}</td>
+                                    <td class="text-center p-3">1</td>
+                                    <td class="text-right p-3">${formatCurrency(installment.amount)}</td>
+                                    <td class="text-right p-3">${formatCurrency(installment.amount)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="flex justify-end mt-6">
+                            <div class="w-full md:w-1/2 text-sm">
+                                ${hasScholarship ? `
+                                <div class="flex justify-between py-2 border-b">
+                                    <span class="text-gray-600">Subtotal:</span>
+                                    <span class="font-medium">${formatCurrency(subtotal)}</span>
+                                </div>
+                                <div class="flex justify-between py-2 border-b">
+                                    <span class="text-gray-600">Beca (${student.scholarship}%):</span>
+                                    <span class="font-medium text-red-500">-${formatCurrency(discountAmount)}</span>
+                                </div>
+                                ` : ''}
+                                <div class="flex justify-between py-2 bg-gray-100 rounded-b-lg px-2">
+                                    <span class="font-bold text-gray-800 text-base">Total Pagado:</span>
+                                    <span class="font-bold text-gray-900 text-base">${formatCurrency(installment.amount)}</span>
+                                </div>
+                                 <div class="flex justify-between py-2">
+                                    <span class="font-bold text-gray-800 text-lg">Saldo Adeudado:</span>
+                                    <span class="font-bold text-gray-900 text-lg">${formatCurrency(0)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-t-2 mt-10 pt-6 text-xs text-gray-500 text-center">
+                            <p class="font-semibold">¡Gracias por su pago!</p>
+                            <p>Método de pago: ${installment.paymentMethod}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-gray-50 flex justify-end gap-2">
+                         <button id="download-invoice-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md">Descargar PDF</button>
+                         <button id="close-invoice-btn" class="px-4 py-2 bg-gray-200 rounded-md">Cerrar</button>
+                    </div>
+                </div>`;
+
+            modal.classList.remove('hidden');
+            modal.querySelector('#close-invoice-btn').onclick = () => modal.classList.add('hidden');
+            modal.querySelector('#download-invoice-btn').onclick = () => downloadInvoiceAsPDF(student, installment);
+        }
+
+        // --- Funciones de Utilidad y Seguridad ---
+
+        function exportMonthlyReportToCSV() {
+            if (monthlyReportCache.length === 0) {
+                alert('No hay datos en el reporte actual para exportar.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Alumno,Generacion,Monto,Estado\r\n";
+
+            monthlyReportCache.forEach(row => {
+                const statusText = row.status.charAt(0).toUpperCase() + row.status.slice(1);
+                csvContent += `${row.name},${row.generation},${row.amount},${statusText}\r\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `reporte_${monthFilter.options[monthFilter.selectedIndex].text}_${yearFilter.value}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function validateAction() {
+            return new Promise(resolve => {
+                const modal = document.getElementById('auth-modal');
+                modal.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm">
+                    <h3 class="text-lg font-bold text-center mb-4">Validación Requerida</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="auth-user" class="block text-sm font-medium text-gray-700">Usuario</label>
+                            <input type="text" id="auth-user" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" value="Dulce">
+                        </div>
+                        <div>
+                            <label for="auth-pass" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                            <input type="password" id="auth-pass" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3">
+                        </div>
+                        <p id="auth-error" class="text-red-500 text-sm text-center hidden">Credenciales incorrectas.</p>
+                        <div class="flex gap-2 pt-2">
+                             <button id="auth-cancel-btn" class="w-full py-2 px-4 bg-gray-200 rounded-md">Cancelar</button>
+                             <button id="auth-confirm-btn" class="w-full py-2 px-4 bg-blue-600 text-white rounded-md">Confirmar</button>
+                        </div>
+                    </div>
+                </div>`;
+                modal.classList.remove('hidden');
+
+                const userField = modal.querySelector('#auth-user');
+                const passField = modal.querySelector('#auth-pass');
+                const errorEl = modal.querySelector('#auth-error');
+
+                const closeModal = () => modal.classList.add('hidden');
+
+                modal.querySelector('#auth-cancel-btn').onclick = () => {
+                    closeModal();
+                    resolve(false);
+                };
+
+                modal.querySelector('#auth-confirm-btn').onclick = () => {
+                    if (userField.value === 'Dulce' && passField.value === '1234') {
+                        closeModal();
+                        resolve(true);
+                    } else {
+                        errorEl.classList.remove('hidden');
+                        // No resolvemos para que el usuario pueda intentarlo de nuevo
+                    }
+                };
+            });
+        }
+        
+        function sendEmailNotification(student, installment) {
+            const adminEmail = 'georgebenitez973@gmail.com';
+            const subject = `Notificación de Pago Registrado: ${student.name}`;
+            const body = `Hola Jorge,\n\nSe ha registrado un nuevo pago en el sistema:\n\n- Alumno: ${student.name}\n- Programa: ${student.program}\n- Generación: ${student.generation}\n- Concepto: Mensualidad ${installment.installmentNumber}\n- Monto: ${formatCurrency(installment.amount)}\n\nSaludos,\nSistema de Contabilidad.`;
+            const url = `mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            // Esta acción abre el cliente de correo del usuario.
+            // Para un envío 100% automático se requiere un backend (servidor).
+            console.log("Intentando enviar correo de notificación...");
+            window.open(url, '_blank');
+        }
+        
+        async function exportGasAnalysisToPDF() {
+            const { jsPDF } = window.jspdf;
+            const gasAnalysisElement = document.getElementById('gas-analysis-content-to-export');
+            
+            gasAnalysisElement.style.backgroundColor = 'white';
+            const canvas = await html2canvas(gasAnalysisElement, { scale: 2 });
+            gasAnalysisElement.style.backgroundColor = '';
+            const imgData = canvas.toDataURL('image/png');
+            
+            const pdf = new jsPDF({
+                orientation: 'l',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.save(`analisis-gasolina-${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`);
+        }
+
+        // --- Inicio ---
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-pass').value;
+            const errorEl = document.getElementById('login-error');
+
+            if (user === 'Dulce' && pass === '1234') {
+                loginWrapper.classList.add('hidden');
+                appWrapper.classList.remove('hidden');
+                initializeAppLogic(); // Start the app *after* successful login
+            } else {
+                errorEl.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
