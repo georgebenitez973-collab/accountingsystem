@@ -532,7 +532,9 @@ function setupAllFilters() {
     payrollDepartmentFilter.innerHTML = '<option value="Todos">Todos</option>' + payrollDepartments.map(d => `<option value="${d}">${d}</option>`).join('');
 }
 
+// Reemplaza ESTA FUNCIÓN
 function setupAllForms() {
+    // Formulario de Alumnos
     const studentInstitutionSelect = document.getElementById('student-institution');
     const paidInFullCheckbox = document.getElementById('paid-in-full-checkbox');
     const regularMonthlyAmountInput = document.getElementById('regular-monthly-amount');
@@ -544,19 +546,27 @@ function setupAllForms() {
     scholarshipPercentageInput.addEventListener('input', calculateDiscountedAmount);
     document.getElementById('student-start-date').valueAsDate = new Date();
 
+    // Formulario de Gasolina (CORREGIDO)
     setupGasForm();
     document.getElementById('gas-subtotal').addEventListener('input', calculateGasIva);
+    // CONEXIÓN DEL BOTÓN DE GASOLINA
+    document.getElementById('gas-upload-btn').addEventListener('click', () => document.getElementById('gas-file').click());
+    document.getElementById('gas-file').addEventListener('change', () => handleFileUpload('gas-file', 'gas-file-name'));
 
+    // Formulario de Egresos
     document.getElementById('expense-upload-btn').addEventListener('click', () => document.getElementById('expense-file').click());
     document.getElementById('expense-file').addEventListener('change', () => handleFileUpload('expense-file', 'expense-file-name'));
 }
 
+// Reemplaza ESTE BLOQUE COMPLETO
 function setupAllEventListeners() {
+    // Listeners de Formularios
     document.getElementById('add-student-form').addEventListener('submit', addStudentFormSubmit);
     document.getElementById('add-gas-form').addEventListener('submit', addGasFormSubmit);
     document.getElementById('add-expense-form').addEventListener('submit', addExpenseFormSubmit);
     document.getElementById('add-employee-form').addEventListener('submit', addEmployeeFormSubmit);
 
+    // Listeners de Filtros que re-renderizan
     document.getElementById('month-filter').addEventListener('change', renderMonthlyReport);
     document.getElementById('year-filter').addEventListener('change', renderMonthlyReport);
     document.getElementById('program-filter').addEventListener('change', renderMonthlyReport);
@@ -573,11 +583,41 @@ function setupAllEventListeners() {
         document.getElementById(id).addEventListener('change', renderNominaTab);
     });
     
-    document.getElementById('students-list-container').addEventListener('click', handleStudentListClick);
+    // Listeners de Listas (para botones de editar/eliminar)
+    document.getElementById('students-list-container').addEventListener('click', handleStudentListClick); // CORREGIDO
     document.getElementById('expense-list-container').addEventListener('click', handleExpenseListClick);
     document.getElementById('employee-list-container').addEventListener('click', handleEmployeeListClick);
 
+    // Listeners de Botones de Exportación (CORREGIDO)
     document.getElementById('export-csv-btn').addEventListener('click', exportMonthlyReportToCSV);
+    document.getElementById('export-gas-pdf-btn').addEventListener('click', exportGasAnalysisToPDF);
+}
+
+function exportMonthlyReportToCSV() {
+    if (monthlyReportCache.length === 0) {
+        alert('No hay datos en el reporte actual para exportar.');
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Alumno,Generacion,Monto,Fecha de Vencimiento,Estado\r\n";
+
+    monthlyReportCache.forEach(row => {
+        const cleanName = `"${row.name.replace(/"/g, '""')}"`;
+        const statusText = row.status.charAt(0).toUpperCase() + row.status.slice(1);
+        csvContent += `${cleanName},${row.generation},${row.amount},${row.dueDate},${statusText}\r\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    const monthFilter = document.getElementById('month-filter');
+    const yearFilter = document.getElementById('year-filter');
+    link.setAttribute("download", `reporte_${monthFilter.options[monthFilter.selectedIndex].text}_${yearFilter.value}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
     document.getElementById('export-gas-pdf-btn').addEventListener('click', exportGasAnalysisToPDF);
 }
 
@@ -1141,14 +1181,43 @@ function renderGasAnalysis() {
 // sección VII: ACCIONES DE FORMULARIOS Y MANEJO DE EVENTOS
 // #############################################################################
 
-async function addStudentFormSubmit(e) { e.preventDefault(); if(!await validateAction()) return; const isPaidInFull = document.getElementById('paid-in-full-checkbox').checked; const startDate = document.getElementById('student-start-date').value; let monthlyAmount, installmentsNumber, totalCost, regularMonthly, scholarship; if (isPaidInFull) { totalCost = parseFloat(document.getElementById('total-cost').value); installmentsNumber = parseInt(document.getElementById('program-duration').value, 10); monthlyAmount = totalCost; regularMonthly = totalCost; scholarship = 0; } else { regularMonthly = parseFloat(document.getElementById('regular-monthly-amount').value); scholarship = parseFloat(document.getElementById('scholarship-percentage').value) || 0; monthlyAmount = regularMonthly * (1 - scholarship / 100); installmentsNumber = parseInt(document.getElementById('installments-number').value, 10); totalCost = monthlyAmount * installmentsNumber; } const endDate = new Date(startDate + 'T12:00:00Z'); endDate.setUTCMonth(endDate.getUTCMonth() + installmentsNumber); const installmentsList = []; const paymentAmount = isPaidInFull ? totalCost : monthlyAmount; const loopCount = isPaidInFull ? 1 : installmentsNumber; for(let i=1; i <= loopCount; i++){ const isPaid = isPaidInFull; installmentsList.push({ installmentNumber: i, amount: paymentAmount, status: isPaid ? 'paid' : 'pending', paymentDate: isPaid ? new Date(startDate + 'T12:00:00Z').toISOString() : null, paymentMethod: isPaid ? 'Contado' : null, receiptData: null }); } const student = { id: 'student_' + Date.now(), name: document.getElementById('student-name').value, generation: document.getElementById('student-generation').value, institution: document.getElementById('student-institution').value, program: document.getElementById('student-program').value, regularMonthlyAmount: regularMonthly, scholarship: scholarship, monthlyAmount: monthlyAmount, totalCost: totalCost, status: 'active', createdAt: new Date(startDate + 'T12:00:00Z').toISOString(), programEndDate: endDate.toISOString(), installmentsList: installmentsList }; allStudentsCache.push(student); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-student-form').reset(); document.getElementById('student-start-date').valueAsDate = new Date(); togglePaidInFull(); calculateDiscountedAmount(); }
-async function addExpenseFormSubmit(e) { e.preventDefault(); if (!await validateAction()) return; const fileInput = document.getElementById('expense-file'); let receiptData = null; if (fileInput.files[0]) { try { receiptData = await fileToBase64(fileInput.files[0]); } catch (err) { console.error("Error", err); return; } } const expense = { id: 'exp_' + Date.now(), date: document.getElementById('expense-date').value, provider: document.getElementById('expense-provider').value, reference: document.getElementById('expense-reference').value, detail: document.getElementById('expense-detail').value, amount: parseFloat(document.getElementById('expense-amount').value), concept: document.getElementById('expense-concept').value, company: document.getElementById('expense-company').value, classification: document.getElementById('expense-classification').value, receiptData }; allExpensesCache.push(expense); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-expense-form').reset(); document.getElementById('expense-file-name').textContent = ''; }
-async function addEmployeeFormSubmit(e) { e.preventDefault(); if (!await validateAction()) return; const employee = { id: 'emp_' + Date.now(), name: document.getElementById('employee-name').value, position: document.getElementById('employee-position').value, department: document.getElementById('employee-department').value, company: document.getElementById('employee-company').value, salary: parseFloat(document.getElementById('employee-salary').value), payments: [], status: 'active', createdAt: new Date().toISOString() }; allEmployeesCache.push(employee); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-employee-form').reset(); }
-async function addGasFormSubmit(e) { e.preventDefault(); if (!await validateAction()) return; const fileInput = document.getElementById('gas-file'); let pdfData = null; if (fileInput.files[0]) { try { pdfData = await fileToBase64(fileInput.files[0]); } catch(err) { alert("Error al procesar archivo."); return; } } let driverName = document.getElementById('gas-driver-select').value; const driverData = drivers.find(d => d.name === driverName); if (driverData && driverData.isViaticos) { const viaticosFor = document.getElementById('gas-viaticos-name').value; if (viaticosFor) { driverName = `Viáticos (${viaticosFor})`; } } const newRecord = { id: 'gas_' + Date.now(), vehicleName: driverName, card: document.getElementById('gas-card').value, brand: document.getElementById('gas-brand').value, model: document.getElementById('gas-model-select').value, date: document.getElementById('gas-date').value, quantity: parseFloat(document.getElementById('gas-quantity').value), price: parseFloat(document.getElementById('gas-price').value), subtotal: parseFloat(document.getElementById('gas-subtotal').value), iva: (parseFloat(document.getElementById('gas-subtotal').value) || 0) * 0.16, total: parseFloat(document.getElementById('gas-total').value), pdfData: pdfData }; allGasRecordsCache.push(newRecord); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-gas-form').reset(); document.getElementById('gas-driver-select').dispatchEvent(new Event('change')); document.getElementById('gas-file-name').textContent = ''; }
-async function handleStudentListClick(e) { const button = e.target.closest('button'); if(!button || !button.dataset.id) return; const id = button.dataset.id; if (button.classList.contains('manage-payments-btn')) { openPaymentsModal(id); return; } if (await validateAction()) { if (button.classList.contains('delete-btn')) openDeleteModal(id, 'student'); if (button.classList.contains('toggle-status-btn')) toggleStudentStatus(id); } }
-async function handleExpenseListClick(e) { const button = e.target.closest('button.delete-expense-btn'); if(button) { if (await validateAction()) { openDeleteModal(button.dataset.id, 'expense'); } } }
-async function handleEmployeeListClick(e) { const button = e.target.closest('button'); if (!button || !button.dataset.id) return; const employeeId = button.dataset.id; if (button.classList.contains('pay-btn')) openPayrollPaymentModal(employeeId); else if (button.classList.contains('history-btn')) openPayrollHistoryModal(employeeId); else if (button.classList.contains('toggle-status-employee-btn')) toggleEmployeeStatus(employeeId); else if (button.classList.contains('delete-employee-btn')) openDeleteModal(employeeId, 'employee'); }
+// Reemplaza ESTA FUNCIÓN
+async function addExpenseFormSubmit(e) {
+    e.preventDefault();
+    if (!await validateAction()) return;
 
+    const fileInput = document.getElementById('expense-file');
+    let receiptData = null; 
+
+    if (fileInput.files[0]) {
+        try {
+            receiptData = await fileToBase64(fileInput.files[0]); 
+        } catch (err) {
+            console.error("Error convirtiendo el archivo de egreso", err);
+            alert("Hubo un problema al subir el archivo.");
+            return;
+        }
+    }
+
+    const expense = {
+        id: 'exp_' + Date.now() + Math.random(),
+        date: document.getElementById('expense-date').value,
+        provider: document.getElementById('expense-provider').value,
+        reference: document.getElementById('expense-reference').value,
+        detail: document.getElementById('expense-detail').value,
+        amount: parseFloat(document.getElementById('expense-amount').value),
+        concept: document.getElementById('expense-concept').value,
+        company: document.getElementById('expense-company').value,
+        classification: document.getElementById('expense-classification').value,
+        receiptData: receiptData 
+    };
+
+    allExpensesCache.push(expense);
+    saveAllDataToLocalStorage();
+    renderAllModules();
+    document.getElementById('add-expense-form').reset();
+    document.getElementById('expense-file-name').textContent = '';
+}
 // #############################################################################
 // sección VIII: FUNCIONES DE MODALES Y ACCIONES ESPECÍFICAS
 // #############################################################################
