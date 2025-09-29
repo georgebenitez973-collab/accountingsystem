@@ -345,7 +345,874 @@
     <div id="payroll-history-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
 
     <script>
-        // PEGA AQUÍ EL SCRIPT UNIFICADO COMPLETO QUE TE PROPORCIONÉ ANTERIORMENTE
+       document.addEventListener('DOMContentLoaded', () => {
+
+// #############################################################################
+// sección I: CONFIGURACIÓN GLOBAL Y VARIABLES
+// #############################################################################
+
+let allStudentsCache = [];
+let allGasRecordsCache = [];
+let allExpensesCache = [];
+let allEmployeesCache = [];
+
+let gasChartInstances = {};
+let monthlyReportCache = [];
+
+let mainDashboardChartInstance = null;
+let monthlyComparisonChartInstance, yearlyComparisonChartInstance;
+let expenseConceptChartInstance = null;
+let payrollDepartmentChartInstance = null;
+let gasLineChartInstance = null;
+
+const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+const drivers = [ { name: 'Seleccione un nombre...', card: '' , isViaticos: false}, { name: "Lic. Armando", card: "1382", isViaticos: false }, { name: "Escolta Gaby (Israel)", card: "", isViaticos: false }, { name: "Escolta Dr Conde (Mauricio)", card: "1408", isViaticos: false }, { name: "Escolta Tere (Alba)", card: "8712", isViaticos: false }, { name: "Gerardo Lozano", card: "1424", isViaticos: false }, { name: "Antonio Lozano", card: "1432", isViaticos: false }, { name: "Dr Olivares (Luis)", card: "1457", isViaticos: false }, { name: "Gaby (Richard)", card: "1390", isViaticos: false }, { name: "Armando", card: "", isViaticos: false }, { name: "Don Boni", card: "8217", isViaticos: false }, { name: "Viáticos", card: "0362", isViaticos: true }, ];
+const cars = [ { model: 'Seleccione un auto...', brand: '' }, { model: "THUNDERBIRD", brand: "FORD" }, { model: "NAVIGATOR", brand: "LINCOLN" }, { model: "GLE COUPÉ", brand: "MERCEDES BENZ" }, { model: "MUSTANG ROJO", brand: "FORD" }, { model: "SUBURBAN HIGH COUNTRY G", brand: "CHEVROLET" }, { model: "SIENNA", brand: "TOYOTA" }, { model: "HIGHLANDER", brand: "TOYOTA" }, { model: "SENTRA", brand: "NISSAN" }, { model: "SUBURBAN GRIS", brand: "CHEVROLET" }, { model: "RAV4 BLANCA", brand: "TOYOTA" }, { model: "RAV4 AZUL", brand: "TOYOTA" }, { model: "DURANGO", brand: "DODGE" }, { model: "ALTIMA", brand: "NISSAN" }, { model: "MOTOS DE ACUÁTICAS", brand: "-" }, { model: "PODADORA", brand: "-" }, ];
+const programsByInstitution = { UDC: { 'Médicas': [ 'Maestría en Medicina Estética y Longevidad' ], 'No Médicas': [ 'Técnico Superior Universitario', 'Licenciatura en Derecho', 'Licenciatura en Pedagogía', 'Licenciatura en Contaduría Pública', 'Licenciatura en Administración de Empresas', 'Maestría en Criminología', 'Maestría en Educación', 'Maestría en Derecho Procesal Penal', 'Maestría en Administración y Dirección de Empresas', 'Doctorado en Administración Pública', 'Doctorado en Educación' ] }, IESM: { 'Médicas': [ 'Maestría en Cirugía Estética' ], 'No Médicas': [] } };
+
+
+// #############################################################################
+// sección II: FUNCIONES DE UTILIDAD (COMPARTIDAS)
+// #############################################################################
+
+function formatCurrency(value) {
+    if (typeof value !== 'number') { value = parseFloat(value) || 0; }
+    return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+}
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+// #############################################################################
+// sección III: LÓGICA DE DATOS, NAVEGACIÓN Y LOGIN
+// #############################################################################
+
+function loadAllDataFromLocalStorage() {
+    const studentsData = localStorage.getItem('studentsDB');
+    allStudentsCache = studentsData ? JSON.parse(studentsData) : [];
+    const gasData = localStorage.getItem('gasDB');
+    allGasRecordsCache = gasData ? JSON.parse(gasData) : [];
+    const expenseData = localStorage.getItem('expensesDB');
+    allExpensesCache = expenseData ? JSON.parse(expenseData) : [];
+    const employeeData = localStorage.getItem('employeesDB');
+    allEmployeesCache = employeeData ? JSON.parse(employeeData) : [];
+}
+
+function saveAllDataToLocalStorage() {
+    localStorage.setItem('studentsDB', JSON.stringify(allStudentsCache));
+    localStorage.setItem('gasDB', JSON.stringify(allGasRecordsCache));
+    localStorage.setItem('expensesDB', JSON.stringify(allExpensesCache));
+    localStorage.setItem('employeesDB', JSON.stringify(allEmployeesCache));
+}
+
+function setupNavigation() {
+    const mainTabsContainer = document.getElementById('main-tabs');
+    const mainTabContents = document.querySelectorAll('#app-wrapper > main > .tab-content');
+    
+    mainTabsContainer.addEventListener('click', (e) => {
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const tab = button.dataset.tab;
+        mainTabsContainer.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active', 'text-blue-600');
+            btn.classList.add('text-gray-500');
+        });
+        button.classList.add('active', 'text-blue-600');
+        button.classList.remove('text-gray-500');
+
+        mainTabContents.forEach(content => {
+            content.classList.toggle('active', content.id === `${tab}-content`);
+        });
+    });
+}
+
+document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const user = document.getElementById('login-user').value;
+    const pass = document.getElementById('login-pass').value;
+    if (user === 'Dulce' && pass === '1234') {
+        document.getElementById('login-wrapper').classList.add('hidden');
+        document.getElementById('app-wrapper').classList.remove('hidden');
+        initializeAppLogic();
+    } else {
+        document.getElementById('login-error').classList.remove('hidden');
+    }
+});
+
+// #############################################################################
+// sección IV: INICIALIZACIÓN Y RENDERIZADO PRINCIPAL
+// #############################################################################
+
+function initializeAppLogic() {
+    loadAllDataFromLocalStorage();
+    setupNavigation();
+    setupAllFilters();
+    setupAllForms();
+    renderAllModules();
+    setupAllEventListeners();
+}
+
+function renderAllModules() {
+    setupAllFilters(); // Actualiza los filtros con los datos más recientes
+    renderMainDashboard();
+    renderAlumnosTab();
+    renderEgresosTab();
+    renderNominaTab();
+    renderGasolinaTab();
+    renderProyeccionesTab();
+}
+
+function setupAllFilters() {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    // Filtros de Alumnos
+    const monthFilter = document.getElementById('month-filter');
+    const yearFilter = document.getElementById('year-filter');
+    const programFilter = document.getElementById('program-filter');
+    monthFilter.innerHTML = MONTH_NAMES.map((month, index) => `<option value="${index}" ${index === currentMonth ? 'selected' : ''}>${month}</option>`).join('');
+    let studentYearOptions = '';
+    for (let i = currentYear - 15; i <= currentYear + 5; i++) { studentYearOptions += `<option value="${i}" ${i === currentYear ? 'selected' : ''}>${i}</option>`; }
+    yearFilter.innerHTML = studentYearOptions;
+    const programs = [...new Set(allStudentsCache.map(s => s.program))].sort();
+    programFilter.innerHTML = '<option value="Todos">Todos</option>' + programs.map(p => `<option value="${p}">${p}</option>`).join('');
+
+    // Filtros de Gasolina
+    const gasAnalysisYearFilter = document.getElementById('gas-analysis-year-filter');
+    const gasAnalysisMonthFilter = document.getElementById('gas-analysis-month-filter');
+    const gasAnalysisDriverFilter = document.getElementById('gas-analysis-driver-filter');
+    gasAnalysisMonthFilter.innerHTML = '<option value="Todos">Todos</option>' + MONTH_NAMES.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+    const gasYears = [...new Set(allGasRecordsCache.map(rec => new Date(rec.date).getFullYear()))].sort((a,b) => b-a);
+    if (!gasYears.includes(currentYear)) gasYears.unshift(currentYear);
+    gasAnalysisYearFilter.innerHTML = '<option value="Todos">Todos</option>' + gasYears.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('');
+    const driverNames = [...new Set(allGasRecordsCache.map(rec => rec.vehicleName))].sort();
+    gasAnalysisDriverFilter.innerHTML = '<option value="Todos">Todos</option>' + driverNames.map(name => `<option value="${name}">${name}</option>`).join('');
+    
+    // Filtros de Egresos
+    const expenseAnalysisYearFilter = document.getElementById('expense-analysis-year-filter');
+    const expenseAnalysisMonthFilter = document.getElementById('expense-analysis-month-filter');
+    const expenseCompanyFilter = document.getElementById('expense-company-filter');
+    const expenseConceptFilter = document.getElementById('expense-concept-filter');
+    const expenseClassificationFilter = document.getElementById('expense-classification-filter');
+    const expenseYears = [...new Set(allExpensesCache.map(rec => new Date(rec.date + 'T00:00:00').getFullYear()))].sort((a, b) => b - a);
+    if (!expenseYears.includes(currentYear)) expenseYears.unshift(currentYear);
+    expenseAnalysisYearFilter.innerHTML = '<option value="Todos">Todos</option>' + expenseYears.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('');
+    expenseAnalysisMonthFilter.innerHTML = '<option value="Todos">Todos</option>' + MONTH_NAMES.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+    const expenseCompanies = [...new Set(allExpensesCache.map(e => e.company))].sort();
+    expenseCompanyFilter.innerHTML = '<option value="Todos">Todas</option>' + expenseCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+    const expenseConcepts = [...new Set(allExpensesCache.map(e => e.concept))].sort();
+    expenseConceptFilter.innerHTML = '<option value="Todos">Todos</option>' + expenseConcepts.map(c => `<option value="${c}">${c}</option>`).join('');
+    const expenseClassifications = [...new Set(allExpensesCache.map(e => e.classification))].sort();
+    expenseClassificationFilter.innerHTML = '<option value="Todos">Todas</option>' + expenseClassifications.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    // Filtros de Nómina
+    const payrollAnalysisYearFilter = document.getElementById('payroll-analysis-year-filter');
+    const payrollAnalysisMonthFilter = document.getElementById('payroll-analysis-month-filter');
+    const payrollViewYear = document.getElementById('payroll-view-year');
+    const payrollViewMonth = document.getElementById('payroll-view-month');
+    const payrollCompanyFilter = document.getElementById('payroll-company-filter');
+    const payrollDepartmentFilter = document.getElementById('payroll-department-filter');
+    let payrollYearOptions = '';
+    for (let i = currentYear - 5; i <= currentYear + 5; i++) { payrollYearOptions += `<option value="${i}" ${i === currentYear ? 'selected' : ''}>${i}</option>`; }
+    payrollAnalysisYearFilter.innerHTML = payrollYearOptions;
+    payrollViewYear.innerHTML = payrollYearOptions;
+    payrollAnalysisMonthFilter.innerHTML = '<option value="Todos">Todos</option>' + MONTH_NAMES.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+    payrollViewMonth.innerHTML = MONTH_NAMES.map((m, i) => `<option value="${i}" ${i === currentMonth ? 'selected' : ''}>${m}</option>`).join('');
+    const payrollCompanies = [...new Set(allEmployeesCache.map(e => e.company))].sort();
+    payrollCompanyFilter.innerHTML = '<option value="Todos">Todas</option>' + payrollCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+    const payrollDepartments = [...new Set(allEmployeesCache.map(e => e.department))].sort();
+    payrollDepartmentFilter.innerHTML = '<option value="Todos">Todos</option>' + payrollDepartments.map(d => `<option value="${d}">${d}</option>`).join('');
+}
+
+function setupAllForms() {
+    const studentInstitutionSelect = document.getElementById('student-institution');
+    const paidInFullCheckbox = document.getElementById('paid-in-full-checkbox');
+    const regularMonthlyAmountInput = document.getElementById('regular-monthly-amount');
+    const scholarshipPercentageInput = document.getElementById('scholarship-percentage');
+    updateProgramOptions();
+    studentInstitutionSelect.addEventListener('change', updateProgramOptions);
+    paidInFullCheckbox.addEventListener('change', togglePaidInFull);
+    regularMonthlyAmountInput.addEventListener('input', calculateDiscountedAmount);
+    scholarshipPercentageInput.addEventListener('input', calculateDiscountedAmount);
+    document.getElementById('student-start-date').valueAsDate = new Date();
+
+    setupGasForm();
+    document.getElementById('gas-subtotal').addEventListener('input', calculateGasIva);
+
+    document.getElementById('expense-upload-btn').addEventListener('click', () => document.getElementById('expense-file').click());
+    document.getElementById('expense-file').addEventListener('change', () => handleFileUpload('expense-file', 'expense-file-name'));
+}
+
+function setupAllEventListeners() {
+    document.getElementById('add-student-form').addEventListener('submit', addStudentFormSubmit);
+    document.getElementById('add-gas-form').addEventListener('submit', addGasFormSubmit);
+    document.getElementById('add-expense-form').addEventListener('submit', addExpenseFormSubmit);
+    document.getElementById('add-employee-form').addEventListener('submit', addEmployeeFormSubmit);
+
+    document.getElementById('month-filter').addEventListener('change', renderMonthlyReport);
+    document.getElementById('year-filter').addEventListener('change', renderMonthlyReport);
+    document.getElementById('program-filter').addEventListener('change', renderMonthlyReport);
+    
+    document.getElementById('gas-analysis-year-filter').addEventListener('change', renderGasolinaTab);
+    document.getElementById('gas-analysis-month-filter').addEventListener('change', renderGasolinaTab);
+    document.getElementById('gas-analysis-driver-filter').addEventListener('change', renderGasolinaTab);
+
+    ['expense-analysis-year-filter', 'expense-analysis-month-filter', 'expense-company-filter', 'expense-concept-filter', 'expense-classification-filter'].forEach(id => {
+        document.getElementById(id).addEventListener('change', renderEgresosTab);
+    });
+
+    ['payroll-view-year', 'payroll-view-month', 'payroll-analysis-year-filter', 'payroll-analysis-month-filter', 'payroll-company-filter', 'payroll-department-filter'].forEach(id => {
+        document.getElementById(id).addEventListener('change', renderNominaTab);
+    });
+    
+    document.getElementById('students-list-container').addEventListener('click', handleStudentListClick);
+    document.getElementById('expense-list-container').addEventListener('click', handleExpenseListClick);
+    document.getElementById('employee-list-container').addEventListener('click', handleEmployeeListClick);
+
+    document.getElementById('export-csv-btn').addEventListener('click', exportMonthlyReportToCSV);
+    document.getElementById('export-gas-pdf-btn').addEventListener('click', exportGasAnalysisToPDF);
+}
+
+// #############################################################################
+// sección V: RENDERIZADO DE MÓDULOS (CÓDIGO COMPLETO)
+// #############################################################################
+
+function renderMainDashboard() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const incomeMonth = allStudentsCache.flatMap(s => s.installmentsList || []).filter(p => p.status === 'paid' && p.paymentDate && new Date(p.paymentDate).getFullYear() === currentYear && new Date(p.paymentDate).getMonth() === currentMonth).reduce((sum, p) => sum + p.amount, 0);
+    const expensesMonth = allExpensesCache.filter(e => { const d = new Date(e.date + 'T00:00:00'); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; }).reduce((sum, e) => sum + e.amount, 0);
+    const payrollMonth = allEmployeesCache.flatMap(emp => emp.payments).filter(p => { const d = new Date(p.date); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; }).reduce((sum, p) => sum + p.amount, 0);
+    
+    document.getElementById('db-total-income').textContent = formatCurrency(incomeMonth);
+    document.getElementById('db-total-expenses').textContent = formatCurrency(expensesMonth);
+    document.getElementById('db-total-payroll').textContent = formatCurrency(payrollMonth);
+    document.getElementById('db-net-balance').textContent = formatCurrency(incomeMonth - expensesMonth - payrollMonth);
+    
+    const incomeByMonth = Array(12).fill(0);
+    allStudentsCache.flatMap(s => s.installmentsList || []).filter(p => p.status === 'paid' && p.paymentDate && new Date(p.paymentDate).getFullYear() === currentYear).forEach(p => { incomeByMonth[new Date(p.paymentDate).getMonth()] += p.amount; });
+    const expensesByMonth = Array(12).fill(0);
+    allExpensesCache.filter(e => new Date(e.date + 'T00:00:00').getFullYear() === currentYear).forEach(e => { expensesByMonth[new Date(e.date + 'T00:00:00').getMonth()] += e.amount; });
+    const payrollByMonth = Array(12).fill(0);
+    allEmployeesCache.flatMap(emp => emp.payments).filter(p => new Date(p.date).getFullYear() === currentYear).forEach(p => { payrollByMonth[new Date(p.date).getMonth()] += p.amount; });
+
+    const ctx = document.getElementById('main-dashboard-chart').getContext('2d');
+    if (mainDashboardChartInstance) mainDashboardChartInstance.destroy();
+    mainDashboardChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: MONTH_NAMES,
+            datasets: [
+                { label: 'Ingresos (Alumnos)', data: incomeByMonth, backgroundColor: 'rgba(22, 163, 74, 0.7)' },
+                { label: 'Egresos', data: expensesByMonth, backgroundColor: 'rgba(220, 38, 38, 0.7)' },
+                { label: 'Nómina', data: payrollByMonth, backgroundColor: 'rgba(245, 158, 11, 0.7)' }
+            ]
+        },
+        options: { scales: { x: { stacked: false }, y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: context => formatCurrency(context.parsed.y) } } } }
+    });
+}
+
+function renderAlumnosTab() {
+    renderAcademicDashboard();
+    renderStudentsList();
+    renderMonthlyReport();
+}
+
+function renderEgresosTab() {
+    renderExpenseList();
+    renderExpenseAnalysis();
+}
+
+function renderNominaTab() {
+    renderPayrollList();
+    renderPayrollAnalysisCharts();
+}
+
+function renderGasolinaTab() {
+    renderGasList();
+    renderGasAnalysis();
+}
+
+function renderProyeccionesTab() {
+    const content = document.getElementById('projections-content');
+    content.classList.remove('hidden');
+    
+    let totalProjected = 0, totalCollected = 0, expectedMonthly = 0;
+    const monthlyData = {}; 
+    const yearlyData = {};
+    
+    allStudentsCache.forEach(student => {
+        const totalCost = parseFloat(student.totalCost || 0);
+        const paidAmount = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+
+        totalProjected += totalCost;
+        totalCollected += paidAmount;
+        
+        if (student.status === 'active' && paidAmount < totalCost) {
+            const nextPending = (student.installmentsList || []).find(p => p.status === 'pending');
+            if (nextPending) {
+                const startDate = new Date(student.createdAt);
+                const dueDate = new Date(startDate.setUTCMonth(startDate.getUTCMonth() + nextPending.installmentNumber - 1));
+                if (dueDate.getFullYear() === new Date().getFullYear() && dueDate.getMonth() === new Date().getMonth()){
+                    expectedMonthly += parseFloat(student.monthlyAmount || 0);
+                }
+            }
+        }
+
+        (student.installmentsList || []).forEach(p => {
+            if (p.status === 'paid' && p.paymentDate) {
+                const date = new Date(p.paymentDate);
+                const year = date.getUTCFullYear();
+                const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+                const yearMonth = `${year}-${month}`;
+                monthlyData[yearMonth] = (monthlyData[yearMonth] || 0) + p.amount;
+                yearlyData[year] = (yearlyData[year] || 0) + p.amount;
+            }
+        });
+    });
+
+    const totalPending = allStudentsCache.filter(s => s.status === 'active').reduce((sum, s) => {
+        const paid = (s.installmentsList || []).filter(p => p.status === 'paid').reduce((pSum, p) => pSum + p.amount, 0);
+        return sum + (s.totalCost - paid);
+    }, 0);
+
+    document.getElementById('total-projected').textContent = formatCurrency(totalProjected);
+    document.getElementById('total-collected').textContent = formatCurrency(totalCollected);
+    document.getElementById('total-pending-balance').textContent = formatCurrency(totalPending);
+    document.getElementById('expected-monthly-income').textContent = formatCurrency(expectedMonthly);
+    
+    const monthlyCtx = document.getElementById('monthlyComparisonChart').getContext('2d');
+    const currentYear = new Date().getFullYear();
+    const monthlyChartData = MONTH_NAMES.map((_, i) => {
+        const monthKey = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`;
+        return monthlyData[monthKey] || 0;
+    });
+
+    if(monthlyComparisonChartInstance) monthlyComparisonChartInstance.destroy();
+    monthlyComparisonChartInstance = new Chart(monthlyCtx, {
+        type: 'bar',
+        data: {
+            labels: MONTH_NAMES,
+            datasets: [{ label: `Ingresos Recaudados ${currentYear}`, data: monthlyChartData, backgroundColor: 'rgba(59, 130, 246, 0.7)' }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (c) => formatCurrency(c.parsed.y) } } } }
+    });
+
+    const yearlyCtx = document.getElementById('yearlyComparisonChart').getContext('2d');
+    const sortedYears = Object.keys(yearlyData).sort();
+    const yearlyChartData = sortedYears.map(year => yearlyData[year]);
+    
+    if(yearlyComparisonChartInstance) yearlyComparisonChartInstance.destroy();
+    yearlyComparisonChartInstance = new Chart(yearlyCtx, {
+        type: 'bar',
+        data: {
+            labels: sortedYears,
+            datasets: [{ label: 'Ingresos Recaudados por Año', data: yearlyChartData, backgroundColor: 'rgba(22, 163, 74, 0.7)' }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (c) => formatCurrency(c.parsed.y) } } } }
+    });
+    
+    document.getElementById('projections-loader').classList.add('hidden');
+}
+
+
+// #############################################################################
+// sección VI: FUNCIONES DETALLADAS DE CADA MÓDULO (LÓGICA)
+// #############################################################################
+
+// --- 6.1 ALUMNOS: DETALLES ---
+function renderAcademicDashboard() {
+    const dashboardContent = document.getElementById('dashboard-content');
+    const generationContent = document.getElementById('generation-dashboard-content');
+    const emptyEl = document.getElementById('dashboard-empty');
+    if (allStudentsCache.length === 0) {
+        dashboardContent.innerHTML = '';
+        generationContent.innerHTML = '';
+        emptyEl.classList.remove('hidden');
+        return;
+    }
+    emptyEl.classList.add('hidden');
+    document.getElementById('dashboard-loader').classList.add('hidden');
+
+    const programSummary = allStudentsCache.reduce((acc, student) => {
+        const program = student.program || 'Sin Programa';
+        if (!acc[program]) { acc[program] = { totalContracted: 0, totalPaid: 0, activeContracted: 0, inactiveContracted: 0 }; }
+        const studentTotal = parseFloat(student.totalCost || 0);
+        const studentPaid = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        acc[program].totalContracted += studentTotal;
+        acc[program].totalPaid += studentPaid;
+        if(student.status === 'active'){ acc[program].activeContracted += studentTotal; } 
+        else { acc[program].inactiveContracted += studentTotal; }
+        return acc;
+    }, {});
+
+    dashboardContent.innerHTML = Object.entries(programSummary).map(([program, data]) => {
+        const activePending = data.activeContracted - data.totalPaid;
+        return `<div class="bg-white p-6 rounded-2xl shadow-lg"><h3 class="text-lg font-bold text-gray-800 truncate">${program}</h3><div class="mt-4 space-y-2"><div class="flex justify-between text-sm"><span class="text-gray-500">Contratado (Activos):</span> <span class="font-medium">${formatCurrency(data.activeContracted)}</span></div><div class="flex justify-between text-sm"><span class="text-gray-500">Contratado (Bajas):</span> <span class="font-medium text-gray-400">${formatCurrency(data.inactiveContracted)}</span></div><div class="flex justify-between text-sm"><span class="text-green-600">Total Pagado:</span> <span class="font-medium text-green-600">${formatCurrency(data.totalPaid)}</span></div><div class="flex justify-between text-sm font-bold"><span class="text-yellow-600">Balance Pendiente (Activos):</span> <span class="text-yellow-600">${formatCurrency(activePending > 0 ? activePending : 0)}</span></div></div></div>`;
+    }).join('');
+    
+    const generationSummary = allStudentsCache.reduce((acc, student) => {
+        const generation = student.generation || 'Sin Generación';
+        if (!acc[generation]) acc[generation] = {};
+        const program = student.program || 'Sin Programa';
+        if(!acc[generation][program]) acc[generation][program] = { totalContracted: 0, totalPaid: 0 };
+        acc[generation][program].totalContracted += parseFloat(student.totalCost || 0);
+        const paid = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        acc[generation][program].totalPaid += paid;
+        return acc;
+    }, {});
+
+    generationContent.innerHTML = Object.entries(generationSummary).map(([generation, programs]) => {
+        let programHTML = Object.entries(programs).map(([program, data]) => {
+            const pending = data.totalContracted - data.totalPaid;
+            return `<div class="mt-2 pt-2 border-t"><h4 class="font-semibold text-gray-700">${program}</h4><div class="flex justify-between text-xs mt-1"><span class="text-gray-500">Contratado:</span> <span class="font-medium">${formatCurrency(data.totalContracted)}</span></div><div class="flex justify-between text-xs"><span class="text-green-600">Pagado:</span> <span class="font-medium text-green-600">${formatCurrency(data.totalPaid)}</span></div><div class="flex justify-between text-xs"><span class="text-yellow-600">Pendiente:</span> <span class="font-medium text-yellow-600">${formatCurrency(pending)}</span></div></div>`;
+        }).join('');
+        return `<div class="bg-white p-6 rounded-2xl shadow-lg"><h3 class="text-xl font-bold text-gray-800 truncate">Generación: ${generation}</h3>${programHTML}</div>`;
+    }).join('');
+}
+
+function renderStudentsList() {
+    const tableBody = document.getElementById('students-table-body');
+    const container = document.getElementById('students-list-container');
+    const emptyEl = document.getElementById('students-empty');
+    container.classList.remove('hidden');
+    document.getElementById('students-loader').classList.add('hidden');
+    
+    if (allStudentsCache.length === 0) {
+        tableBody.innerHTML = '';
+        emptyEl.classList.remove('hidden');
+        return;
+    }
+    emptyEl.classList.add('hidden');
+
+    tableBody.innerHTML = allStudentsCache.map(student => {
+        const totalPaid = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+        const totalCost = parseFloat(student.totalCost || 0);
+        const percentage = totalCost > 0 ? (totalPaid / totalCost) * 100 : 0;
+        const isActive = student.status === 'active';
+        const endDate = student.programEndDate ? new Date(student.programEndDate).toLocaleDateString() : 'N/A';
+        const hasScholarship = (student.scholarship || 0) > 0;
+
+        return `
+            <tr class="hover:bg-gray-50 ${!isActive ? 'student-inactive' : ''}">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${student.name} ${hasScholarship ? `<span class="text-xs font-bold text-blue-600 bg-blue-100 py-0.5 px-2 rounded-full">BECADO</span>` : ''}</div>
+                    <div class="text-xs text-gray-500 mt-1">Fin: ${endDate}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-500">${student.generation}</div></td>
+                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-500">${student.institution} - ${student.program}</div></td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${formatCurrency(totalPaid)} / ${formatCurrency(totalCost)}</div>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${percentage}%"></div></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                    <button class="manage-payments-btn text-blue-600 hover:text-blue-900" data-id="${student.id}">Pagos</button>
+                    <button class="toggle-status-btn text-xs font-semibold py-1 px-2 rounded-md ${isActive ? 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200' : 'text-green-700 bg-green-100 hover:bg-green-200'}" data-id="${student.id}">${isActive ? 'Dar de Baja' : 'Reactivar'}</button>
+                    <button class="delete-btn text-red-600 hover:text-red-900" data-id="${student.id}">Eliminar</button>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+function renderMonthlyReport() {
+    const reportTableBody = document.getElementById('monthly-report-table-body');
+    const monthFilter = document.getElementById('month-filter');
+    const yearFilter = document.getElementById('year-filter');
+    const programFilter = document.getElementById('program-filter');
+    reportTableBody.innerHTML = '';
+    
+    const selectedMonth = parseInt(monthFilter.value, 10);
+    const selectedYear = parseInt(yearFilter.value, 10);
+    const selectedProgram = programFilter.value;
+
+    const monthlyProgressContainer = document.getElementById('monthly-progress-container');
+    monthlyProgressContainer.classList.remove('hidden');
+
+    let monthlyExpected = 0;
+    let monthlyCollected = 0;
+    let reportData = [];
+
+    allStudentsCache
+    .filter(student => (selectedProgram === 'Todos' || student.program === selectedProgram) && student.status === 'active' && student.createdAt)
+    .forEach(student => {
+        const startDate = new Date(student.createdAt);
+        (student.installmentsList || []).forEach((installment, index) => {
+            const dueDate = new Date(startDate);
+            dueDate.setUTCMonth(startDate.getUTCMonth() + index);
+            if (dueDate.getFullYear() === selectedYear && dueDate.getUTCMonth() === selectedMonth) {
+                monthlyExpected += installment.amount;
+                let displayStatus = installment.status;
+                if (installment.status === 'pending' && new Date() > dueDate) { displayStatus = 'overdue'; }
+                reportData.push({ name: student.name, generation: student.generation, amount: installment.amount, dueDate: dueDate.toLocaleDateString(), status: displayStatus });
+                if (installment.status === 'paid') { monthlyCollected += installment.amount; }
+            }
+        });
+    });
+    
+    monthlyReportCache = reportData;
+    const percentage = monthlyExpected > 0 ? (monthlyCollected / monthlyExpected) * 100 : 0;
+    
+    document.getElementById('monthly-progress-circle').style.setProperty('--p', `${percentage}%`);
+    document.getElementById('monthly-progress-text').textContent = `${Math.round(percentage)}%`;
+    document.getElementById('monthly-collected').textContent = formatCurrency(monthlyCollected);
+    document.getElementById('monthly-expected').textContent = formatCurrency(monthlyExpected);
+
+    const emptyReportEl = document.getElementById('monthly-report-empty');
+    if (reportData.length === 0) { emptyReportEl.classList.remove('hidden'); return; }
+    
+    emptyReportEl.classList.add('hidden');
+    reportTableBody.innerHTML = reportData.map(item => {
+        let statusClass = 'bg-yellow-100 text-yellow-800';
+        let statusText = 'Pendiente';
+        if (item.status === 'paid') { statusClass = 'bg-green-100 text-green-800'; statusText = 'Pagado'; } 
+        else if (item.status === 'overdue') { statusClass = 'status-overdue animate-pulse'; statusText = 'ADEUDO'; }
+        return `<tr><td class="px-6 py-4">${item.name}</td><td class="px-6 py-4">${item.generation}</td><td class="px-6 py-4">${formatCurrency(item.amount)}</td><td class="px-6 py-4">${item.dueDate}</td><td class="px-6 py-4"><span class="px-2 inline-flex text-xs font-semibold rounded-full ${statusClass}">${statusText}</span></td></tr>`;
+    }).join('');
+}
+
+
+// --- 7.2 EGRESOS: DETALLES ---
+function renderExpenseList() {
+    const tableBody = document.getElementById('expense-table-body');
+    const expensesEmpty = document.getElementById('expenses-empty');
+    if (allExpensesCache.length === 0) {
+        expensesEmpty.classList.remove('hidden');
+        tableBody.innerHTML = '';
+        return;
+    }
+    expensesEmpty.classList.add('hidden');
+    const sortedExpenses = [...allExpensesCache].sort((a, b) => new Date(b.date) - new Date(a.date));
+    tableBody.innerHTML = sortedExpenses.map(expense => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4"><div class="text-sm font-medium">${expense.provider}</div><div class="text-xs text-gray-500">${expense.detail || ''}</div></td>
+            <td class="px-6 py-4 text-sm">${new Date(expense.date + 'T00:00:00').toLocaleDateString()}</td>
+            <td class="px-6 py-4 text-sm">${expense.concept}</td>
+            <td class="px-6 py-4 text-sm font-bold text-right text-red-600">${formatCurrency(expense.amount)}</td>
+            <td class="px-6 py-4 text-center text-sm space-x-2">
+                ${expense.receiptData ? `<button onclick="viewExpenseReceipt('${expense.id}')" class="text-blue-600 hover:underline">Ver</button>` : ''}
+                <button class="delete-expense-btn text-red-600 hover:text-red-900" data-id="${expense.id}">Eliminar</button>
+            </td>
+        </tr>`).join('');
+}
+
+function renderExpenseAnalysis() {
+    const selectedYear = document.getElementById('expense-analysis-year-filter').value;
+    const selectedMonth = document.getElementById('expense-analysis-month-filter').value;
+    const selectedCompany = document.getElementById('expense-company-filter').value;
+    const selectedConcept = document.getElementById('expense-concept-filter').value;
+    const selectedClassification = document.getElementById('expense-classification-filter').value;
+
+    let filtered = allExpensesCache;
+    if (selectedYear !== 'Todos') filtered = filtered.filter(e => new Date(e.date + 'T00:00:00').getFullYear() === parseInt(selectedYear));
+    if (selectedMonth !== 'Todos') filtered = filtered.filter(e => new Date(e.date + 'T00:00:00').getMonth() === parseInt(selectedMonth));
+    if (selectedCompany !== 'Todos') filtered = filtered.filter(e => e.company === selectedCompany);
+    if (selectedConcept !== 'Todos') filtered = filtered.filter(e => e.concept === selectedConcept);
+    if (selectedClassification !== 'Todos') filtered = filtered.filter(e => e.classification === selectedClassification);
+
+    document.getElementById('expense-total-cost').textContent = formatCurrency(filtered.reduce((sum, e) => sum + e.amount, 0));
+
+    const conceptData = filtered.reduce((acc, exp) => {
+        acc[exp.concept] = (acc[exp.concept] || 0) + exp.amount;
+        return acc;
+    }, {});
+
+    const ctx = document.getElementById('expense-concept-chart').getContext('2d');
+    if (expenseConceptChartInstance) expenseConceptChartInstance.destroy();
+    expenseConceptChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: Object.keys(conceptData), datasets: [{ label: 'Gasto por Concepto', data: Object.values(conceptData), backgroundColor: 'rgba(239, 68, 68, 0.6)' }] },
+        options: { scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: c => formatCurrency(c.parsed.y) } } } }
+    });
+}
+
+
+// --- 7.3 NÓMINA: DETALLES ---
+function renderPayrollList() {
+    const payrollViewYear = document.getElementById('payroll-view-year');
+    const payrollViewMonth = document.getElementById('payroll-view-month');
+    const employeeListContainer = document.getElementById('employee-list-container');
+    const payrollEmpty = document.getElementById('payroll-empty');
+    
+    const selectedYear = parseInt(payrollViewYear.value);
+    const selectedMonth = parseInt(payrollViewMonth.value);
+
+    const activeEmployeesInPeriod = allEmployeesCache.filter(employee => {
+        const joinedDate = new Date(employee.createdAt);
+        if(employee.status === 'inactive' && (!employee.inactiveDate || new Date(employee.inactiveDate) < new Date(selectedYear, selectedMonth, 1))) { return false; }
+        return joinedDate <= new Date(selectedYear, selectedMonth + 1, 0);
+    });
+
+    const groupedByDepartment = activeEmployeesInPeriod.reduce((acc, emp) => {
+        const dept = emp.department || 'Sin Departamento';
+        if (!acc[dept]) acc[dept] = [];
+        acc[dept].push(emp);
+        return acc;
+    }, {});
+
+    if (Object.keys(groupedByDepartment).length === 0) {
+        payrollEmpty.classList.remove('hidden');
+        employeeListContainer.innerHTML = '';
+    } else {
+        payrollEmpty.classList.add('hidden');
+        employeeListContainer.innerHTML = Object.keys(groupedByDepartment).sort().map(department => {
+            const employeesHTML = groupedByDepartment[department].map(employee => {
+                const paymentsThisPeriod = employee.payments.filter(p => { const d = new Date(p.date); return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear; });
+                const paidFirstHalf = paymentsThisPeriod.filter(p => p.quincena === 1).reduce((sum, p) => sum + p.amount, 0);
+                const paidSecondHalf = paymentsThisPeriod.filter(p => p.quincena === 2).reduce((sum, p) => sum + p.amount, 0);
+                const halfSalary = employee.salary / 2;
+                const p1 = halfSalary > 0 ? (paidFirstHalf / halfSalary) * 100 : 0;
+                const p2 = halfSalary > 0 ? (paidSecondHalf / halfSalary) * 100 : 0;
+                return `<div class="bg-gray-50 p-4 rounded-lg shadow-sm ${employee.status === 'inactive' ? 'employee-inactive' : ''}"><div class="flex flex-col sm:flex-row justify-between sm:items-center"><div><p class="font-bold text-lg">${employee.name}</p><p class="text-sm text-gray-600">${employee.position} (${employee.company})</p><p class="text-sm font-medium">${formatCurrency(employee.salary)} / mes</p></div><div class="flex items-center gap-2 mt-2 sm:mt-0 flex-wrap"><button class="pay-btn text-sm bg-green-500 text-white py-1 px-3 rounded-lg" data-id="${employee.id}">Pagar</button><button class="history-btn text-sm bg-blue-500 text-white py-1 px-3 rounded-lg" data-id="${employee.id}">Historial</button><button class="toggle-status-employee-btn text-sm ${employee.status === 'active' ? 'bg-yellow-600' : 'bg-green-600'} text-white py-1 px-3 rounded-lg" data-id="${employee.id}">${employee.status === 'active' ? 'Baja' : 'Reactivar'}</button><button class="delete-employee-btn text-sm bg-red-600 text-white py-1 px-3 rounded-lg" data-id="${employee.id}">Eliminar</button></div></div><div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4"><div><p class="text-xs font-semibold text-gray-500">1ra Quincena:</p><div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-green-600 h-2.5 rounded-full" style="width: ${p1 > 100 ? 100 : p1}%"></div></div><p class="text-xs text-right mt-1">${formatCurrency(paidFirstHalf)} de ${formatCurrency(halfSalary)}</p></div><div><p class="text-xs font-semibold text-gray-500">2da Quincena:</p><div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-green-600 h-2.5 rounded-full" style="width: ${p2 > 100 ? 100 : p2}%"></div></div><p class="text-xs text-right mt-1">${formatCurrency(paidSecondHalf)} de ${formatCurrency(halfSalary)}</p></div></div></div>`;
+            }).join('');
+            return `<div class="mb-6"><h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">${department}</h3><div class="space-y-4">${employeesHTML}</div></div>`;
+        }).join('');
+    }
+    updatePayrollProgress();
+}
+
+function updatePayrollProgress() {
+    const payrollViewYear = document.getElementById('payroll-view-year');
+    const payrollViewMonth = document.getElementById('payroll-view-month');
+    const selectedYear = parseInt(payrollViewYear.value);
+    const selectedMonth = parseInt(payrollViewMonth.value);
+
+    const activeEmployeesInPeriod = allEmployeesCache.filter(e => {
+        const joined = new Date(e.createdAt);
+        if(e.status === 'inactive' && (!e.inactiveDate || new Date(e.inactiveDate) < new Date(selectedYear, selectedMonth, 1))) { return false; }
+        return joined <= new Date(selectedYear, selectedMonth + 1, 0);
+    });
+
+    const totalSalary = activeEmployeesInPeriod.reduce((sum, e) => sum + e.salary, 0);
+    const totalPaid = activeEmployeesInPeriod.reduce((sum, e) => {
+        const payments = e.payments.filter(p => { const d = new Date(p.date); return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear; });
+        return sum + payments.reduce((s, p) => s + p.amount, 0);
+    }, 0);
+    
+    const percentage = totalSalary > 0 ? (totalPaid / totalSalary) * 100 : 0;
+    document.getElementById('payroll-progress-bar').style.width = `${percentage > 100 ? 100 : percentage}%`;
+    document.getElementById('payroll-progress-text').textContent = `${Math.round(percentage)}%`;
+    document.getElementById('payroll-progress-summary').textContent = `${formatCurrency(totalPaid)} / ${formatCurrency(totalSalary)}`;
+}
+
+function renderPayrollAnalysisCharts() {
+    const year = document.getElementById('payroll-analysis-year-filter').value;
+    const month = document.getElementById('payroll-analysis-month-filter').value;
+    const company = document.getElementById('payroll-company-filter').value;
+    const department = document.getElementById('payroll-department-filter').value;
+
+    let filtered = allEmployeesCache;
+    if (company !== 'Todos') filtered = filtered.filter(e => e.company === company);
+    if (department !== 'Todos') filtered = filtered.filter(e => e.department === department);
+
+    const totalCost = filtered.flatMap(emp => emp.payments).filter(p => {
+        const d = new Date(p.date);
+        return (year === 'Todos' || d.getFullYear() === parseInt(year)) && (month === 'Todos' || d.getMonth() === parseInt(month));
+    }).reduce((sum, p) => sum + p.amount, 0);
+    document.getElementById('payroll-total-cost').textContent = formatCurrency(totalCost);
+
+    const departmentData = filtered.reduce((acc, emp) => {
+        acc[emp.department] = (acc[emp.department] || 0) + emp.payments.filter(p => {
+            const d = new Date(p.date);
+            return (year === 'Todos' || d.getFullYear() === parseInt(year)) && (month === 'Todos' || d.getMonth() === parseInt(month));
+        }).reduce((sum, p) => sum + p.amount, 0);
+        return acc;
+    }, {});
+
+    const ctx = document.getElementById('payroll-department-chart').getContext('2d');
+    if(payrollDepartmentChartInstance) payrollDepartmentChartInstance.destroy();
+    payrollDepartmentChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: Object.keys(departmentData), datasets: [{ label: 'Gasto por Departamento', data: Object.values(departmentData), backgroundColor: 'rgba(54, 162, 235, 0.6)' }] },
+        options: { scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: c => formatCurrency(c.parsed.y) } } } }
+    });
+}
+
+
+// --- 7.4 GASOLINA: DETALLES ---
+function renderGasList() {
+    const gasTableBody = document.getElementById('gas-table-body');
+    const gasEmpty = document.getElementById('gas-empty');
+    if (allGasRecordsCache.length === 0) {
+        gasEmpty.classList.remove('hidden');
+        gasTableBody.innerHTML = '';
+        return;
+    }
+    gasEmpty.classList.add('hidden');
+    const sortedGas = [...allGasRecordsCache].sort((a,b) => new Date(b.date) - new Date(a.date));
+    gasTableBody.innerHTML = sortedGas.map(rec => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4"><div class="text-sm font-medium">${rec.vehicleName}</div><div class="text-xs text-gray-500">${rec.model}</div></td>
+            <td class="px-6 py-4 text-sm">${new Date(rec.date).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm font-bold text-right">${formatCurrency(rec.total)}</td>
+            <td class="px-6 py-4 text-center">
+                ${rec.pdfData ? `<button onclick="viewGasReceipt('${rec.id}')" class="text-blue-600 hover:underline">Ver</button>` : '-'}
+            </td>
+        </tr>`).join('');
+}
+
+function renderGasAnalysis() {
+    const year = document.getElementById('gas-analysis-year-filter').value;
+    const month = document.getElementById('gas-analysis-month-filter').value;
+    const driver = document.getElementById('gas-analysis-driver-filter').value;
+    const gasChartsContainer = document.getElementById('gas-charts-container');
+    const gasChartsEmpty = document.getElementById('gas-charts-empty');
+    const gasComparisonContainer = document.getElementById('gas-comparison-container');
+    
+    let filtered = allGasRecordsCache;
+    if (year !== 'Todos') filtered = filtered.filter(rec => new Date(rec.date).getFullYear() === parseInt(year));
+    if (month !== 'Todos') filtered = filtered.filter(rec => new Date(rec.date).getMonth() === parseInt(month));
+    if (driver !== 'Todos') filtered = filtered.filter(rec => rec.vehicleName === driver);
+
+    if (filtered.length === 0) {
+        gasChartsContainer.innerHTML = '';
+        gasChartsEmpty.classList.remove('hidden');
+        gasComparisonContainer.innerHTML = '';
+        return;
+    }
+    gasChartsEmpty.classList.add('hidden');
+
+    const groupedByVehicle = filtered.reduce((acc, rec) => {
+        acc[rec.vehicleName] = (acc[rec.vehicleName] || []).concat(rec);
+        return acc;
+    }, {});
+
+    gasChartsContainer.innerHTML = '';
+    const currentYear = year === 'Todos' ? new Date().getFullYear() : parseInt(year);
+    Object.keys(gasChartInstances).forEach(key => gasChartInstances[key].destroy());
+    gasChartInstances = {};
+
+    Object.entries(groupedByVehicle).forEach(([vehicleName, records]) => {
+        const chartId = `gas-chart-${vehicleName.replace(/[^a-zA-Z0-9]/g, '')}`;
+        gasChartsContainer.innerHTML += `<div class="bg-gray-50 p-4 rounded-lg"><h3 class="text-lg text-center mb-4">${vehicleName}</h3><canvas id="${chartId}"></canvas></div>`;
+        const monthlyTotals = Array(12).fill(0);
+        records.forEach(rec => {
+            const d = new Date(rec.date);
+            if (d.getFullYear() === currentYear) { monthlyTotals[d.getMonth()] += rec.total; }
+        });
+        const ctx = document.getElementById(chartId).getContext('2d');
+        gasChartInstances[chartId] = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: MONTH_NAMES.map(m => m.substring(0,3)), datasets: [{ label: `Gasto en ${currentYear}`, data: monthlyTotals, backgroundColor: 'rgba(255, 99, 132, 0.7)' }] },
+            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (c) => formatCurrency(c.parsed.y) } } } }
+        });
+    });
+    
+    const gasLineCtx = document.getElementById('gas-line-chart').getContext('2d');
+    const vehicleNames = Object.keys(groupedByVehicle);
+    const colors = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6'];
+    const lineChartDatasets = vehicleNames.map((vName, i) => {
+        const monthlyTotals = Array(12).fill(0);
+        groupedByVehicle[vName].forEach(rec => { const d = new Date(rec.date); if (d.getFullYear() === currentYear) { monthlyTotals[d.getMonth()] += rec.total; } });
+        return { label: vName, data: monthlyTotals, borderColor: colors[i % colors.length], fill: false };
+    });
+    
+    if(gasLineChartInstance) gasLineChartInstance.destroy();
+    gasLineChartInstance = new Chart(gasLineCtx, {
+        type: 'line',
+        data: { labels: MONTH_NAMES.map(m => m.substring(0,3)), datasets: lineChartDatasets },
+        options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${formatCurrency(c.parsed.y)}` } } } }
+    });
+
+    const comparisonData = {};
+    vehicleNames.forEach(v => comparisonData[v] = Array(12).fill(0));
+    filtered.forEach(rec => {
+        const d = new Date(rec.date);
+        if (d.getFullYear() === currentYear) { if (comparisonData[rec.vehicleName]) { comparisonData[rec.vehicleName][d.getMonth()] += rec.total; } }
+    });
+    let tableHTML = `<table class="min-w-full text-sm"><thead><tr class="bg-gray-100"><th class="px-4 py-2 text-left">Vehículo</th>${MONTH_NAMES.map(m => `<th class="px-4 py-2 text-right">${m.substring(0,3)}</th>`).join('')}<th class="px-4 py-2 text-right font-bold bg-gray-200">Total</th></tr></thead><tbody>`;
+    Object.entries(comparisonData).forEach(([vName, totals]) => {
+        const yearTotal = totals.reduce((a, b) => a + b, 0);
+        if (yearTotal > 0) { tableHTML += `<tr><td class="px-4 py-2 font-medium">${vName}</td>${totals.map(t => `<td class="px-4 py-2 text-right">${t > 0 ? formatCurrency(t) : '-'}</td>`).join('')}<td class="px-4 py-2 text-right font-bold bg-gray-50">${formatCurrency(yearTotal)}</td></tr>`; }
+    });
+    gasComparisonContainer.innerHTML = tableHTML + `</tbody></table>`;
+}
+
+// #############################################################################
+// sección VII: ACCIONES DE FORMULARIOS Y MANEJO DE EVENTOS
+// #############################################################################
+
+async function addStudentFormSubmit(e) { e.preventDefault(); if(!await validateAction()) return; const isPaidInFull = document.getElementById('paid-in-full-checkbox').checked; const startDate = document.getElementById('student-start-date').value; let monthlyAmount, installmentsNumber, totalCost, regularMonthly, scholarship; if (isPaidInFull) { totalCost = parseFloat(document.getElementById('total-cost').value); installmentsNumber = parseInt(document.getElementById('program-duration').value, 10); monthlyAmount = totalCost; regularMonthly = totalCost; scholarship = 0; } else { regularMonthly = parseFloat(document.getElementById('regular-monthly-amount').value); scholarship = parseFloat(document.getElementById('scholarship-percentage').value) || 0; monthlyAmount = regularMonthly * (1 - scholarship / 100); installmentsNumber = parseInt(document.getElementById('installments-number').value, 10); totalCost = monthlyAmount * installmentsNumber; } const endDate = new Date(startDate + 'T12:00:00Z'); endDate.setUTCMonth(endDate.getUTCMonth() + installmentsNumber); const installmentsList = []; const paymentAmount = isPaidInFull ? totalCost : monthlyAmount; const loopCount = isPaidInFull ? 1 : installmentsNumber; for(let i=1; i <= loopCount; i++){ const isPaid = isPaidInFull; installmentsList.push({ installmentNumber: i, amount: paymentAmount, status: isPaid ? 'paid' : 'pending', paymentDate: isPaid ? new Date(startDate + 'T12:00:00Z').toISOString() : null, paymentMethod: isPaid ? 'Contado' : null, receiptData: null }); } const student = { id: 'student_' + Date.now(), name: document.getElementById('student-name').value, generation: document.getElementById('student-generation').value, institution: document.getElementById('student-institution').value, program: document.getElementById('student-program').value, regularMonthlyAmount: regularMonthly, scholarship: scholarship, monthlyAmount: monthlyAmount, totalCost: totalCost, status: 'active', createdAt: new Date(startDate + 'T12:00:00Z').toISOString(), programEndDate: endDate.toISOString(), installmentsList: installmentsList }; allStudentsCache.push(student); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-student-form').reset(); document.getElementById('student-start-date').valueAsDate = new Date(); togglePaidInFull(); calculateDiscountedAmount(); }
+async function addExpenseFormSubmit(e) { e.preventDefault(); if (!await validateAction()) return; const fileInput = document.getElementById('expense-file'); let receiptData = null; if (fileInput.files[0]) { try { receiptData = await fileToBase64(fileInput.files[0]); } catch (err) { console.error("Error", err); return; } } const expense = { id: 'exp_' + Date.now(), date: document.getElementById('expense-date').value, provider: document.getElementById('expense-provider').value, reference: document.getElementById('expense-reference').value, detail: document.getElementById('expense-detail').value, amount: parseFloat(document.getElementById('expense-amount').value), concept: document.getElementById('expense-concept').value, company: document.getElementById('expense-company').value, classification: document.getElementById('expense-classification').value, receiptData }; allExpensesCache.push(expense); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-expense-form').reset(); document.getElementById('expense-file-name').textContent = ''; }
+async function addEmployeeFormSubmit(e) { e.preventDefault(); if (!await validateAction()) return; const employee = { id: 'emp_' + Date.now(), name: document.getElementById('employee-name').value, position: document.getElementById('employee-position').value, department: document.getElementById('employee-department').value, company: document.getElementById('employee-company').value, salary: parseFloat(document.getElementById('employee-salary').value), payments: [], status: 'active', createdAt: new Date().toISOString() }; allEmployeesCache.push(employee); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-employee-form').reset(); }
+async function addGasFormSubmit(e) { e.preventDefault(); if (!await validateAction()) return; const fileInput = document.getElementById('gas-file'); let pdfData = null; if (fileInput.files[0]) { try { pdfData = await fileToBase64(fileInput.files[0]); } catch(err) { alert("Error al procesar archivo."); return; } } let driverName = document.getElementById('gas-driver-select').value; const driverData = drivers.find(d => d.name === driverName); if (driverData && driverData.isViaticos) { const viaticosFor = document.getElementById('gas-viaticos-name').value; if (viaticosFor) { driverName = `Viáticos (${viaticosFor})`; } } const newRecord = { id: 'gas_' + Date.now(), vehicleName: driverName, card: document.getElementById('gas-card').value, brand: document.getElementById('gas-brand').value, model: document.getElementById('gas-model-select').value, date: document.getElementById('gas-date').value, quantity: parseFloat(document.getElementById('gas-quantity').value), price: parseFloat(document.getElementById('gas-price').value), subtotal: parseFloat(document.getElementById('gas-subtotal').value), iva: (parseFloat(document.getElementById('gas-subtotal').value) || 0) * 0.16, total: parseFloat(document.getElementById('gas-total').value), pdfData: pdfData }; allGasRecordsCache.push(newRecord); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-gas-form').reset(); document.getElementById('gas-driver-select').dispatchEvent(new Event('change')); document.getElementById('gas-file-name').textContent = ''; }
+async function handleStudentListClick(e) { const button = e.target.closest('button'); if(!button || !button.dataset.id) return; const id = button.dataset.id; if (button.classList.contains('manage-payments-btn')) { openPaymentsModal(id); return; } if (await validateAction()) { if (button.classList.contains('delete-btn')) openDeleteModal(id, 'student'); if (button.classList.contains('toggle-status-btn')) toggleStudentStatus(id); } }
+async function handleExpenseListClick(e) { const button = e.target.closest('button.delete-expense-btn'); if(button) { if (await validateAction()) { openDeleteModal(button.dataset.id, 'expense'); } } }
+async function handleEmployeeListClick(e) { const button = e.target.closest('button'); if (!button || !button.dataset.id) return; const employeeId = button.dataset.id; if (button.classList.contains('pay-btn')) openPayrollPaymentModal(employeeId); else if (button.classList.contains('history-btn')) openPayrollHistoryModal(employeeId); else if (button.classList.contains('toggle-status-employee-btn')) toggleEmployeeStatus(employeeId); else if (button.classList.contains('delete-employee-btn')) openDeleteModal(employeeId, 'employee'); }
+
+// #############################################################################
+// sección VIII: FUNCIONES DE MODALES Y ACCIONES ESPECÍFICAS
+// #############################################################################
+
+function calculateDiscountedAmount() { const regularAmount = parseFloat(document.getElementById('regular-monthly-amount').value) || 0; const scholarship = parseFloat(document.getElementById('scholarship-percentage').value) || 0; const finalAmount = regularAmount * (1 - scholarship / 100); document.getElementById('monthly-amount').value = formatCurrency(finalAmount); }
+function updateProgramOptions() { const select = document.getElementById('student-institution'); const programSelect = document.getElementById('student-program'); const programs = programsByInstitution[select.value]; programSelect.innerHTML = ''; for (const group in programs) { if(programs[group].length > 0) { const optgroup = document.createElement('optgroup'); optgroup.label = group; programs[group].forEach(pName => { const option = document.createElement('option'); option.value = pName; option.textContent = pName; optgroup.appendChild(option); }); programSelect.appendChild(optgroup); } } }
+function togglePaidInFull() { const isChecked = document.getElementById('paid-in-full-checkbox').checked; document.getElementById('monthly-payment-section').classList.toggle('hidden', isChecked); document.getElementById('paid-in-full-details').classList.toggle('hidden', !isChecked); document.getElementById('regular-monthly-amount').required = !isChecked; document.getElementById('installments-number').required = !isChecked; document.getElementById('total-cost').required = isChecked; document.getElementById('program-duration').required = isChecked; }
+function setupGasForm() { const driverSelect = document.getElementById('gas-driver-select'); const modelSelect = document.getElementById('gas-model-select'); driverSelect.innerHTML = drivers.map(d => `<option value="${d.name}">${d.name}</option>`).join(''); modelSelect.innerHTML = cars.map(c => `<option value="${c.model}">${c.model}</option>`).join(''); driverSelect.addEventListener('change', () => { const driver = drivers.find(d => d.name === driverSelect.value); const cardInput = document.getElementById('gas-card'); const viaticosDetails = document.getElementById('gas-viaticos-details'); cardInput.value = driver ? driver.card : ''; const isViaticos = driver && driver.isViaticos; viaticosDetails.classList.toggle('hidden', !isViaticos); cardInput.readOnly = !isViaticos; cardInput.classList.toggle('bg-gray-200', !isViaticos); cardInput.classList.toggle('bg-gray-50', isViaticos); }); modelSelect.addEventListener('change', () => { const car = cars.find(c => c.model === modelSelect.value); document.getElementById('gas-brand').value = car ? car.brand : ''; }); driverSelect.dispatchEvent(new Event('change')); }
+function calculateGasIva() { const subtotal = parseFloat(document.getElementById('gas-subtotal').value) || 0; document.getElementById('gas-iva').value = formatCurrency(subtotal * 0.16); }
+
+// ... El resto del código de la sección VI ...
+async function openPaymentsModal(id, editingIndex = null) { /* ... */ }
+function generateInvoice(studentId, paymentIndex) { /* ... */ }
+async function downloadInvoiceAsPDF(student, installment) { /* ... */ }
+function exportMonthlyReportToCSV() { /* ... */ }
+async function openPayrollPaymentModal(employeeId) { /* ... */ }
+function openPayrollHistoryModal(employeeId) { /* ... */ }
+async function toggleEmployeeStatus(employeeId) { /* ... */ }
+async function exportGasAnalysisToPDF() { /* ... */ }
+
+// #############################################################################
+// sección IX: MODALES Y FUNCIONES GLOBALES
+// #############################################################################
+
+function validateAction() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('auth-modal');
+        modal.innerHTML = `<div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm"><h3 class="text-lg font-bold text-center mb-4">Validación Requerida</h3><div class="space-y-4"><div><label for="auth-user" class="block text-sm">Usuario</label><input type="text" id="auth-user" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg" value="Dulce" readonly></div><div><label for="auth-pass" class="block text-sm">Contraseña</label><input type="password" id="auth-pass" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg" autofocus></div><p id="auth-error" class="text-red-500 text-sm text-center hidden">Incorrecto.</p><div class="flex gap-2 pt-2"><button id="auth-cancel-btn" class="w-full py-2 px-4 bg-gray-200 rounded-md">Cancelar</button><button id="auth-confirm-btn" class="w-full py-2 px-4 bg-blue-600 text-white rounded-md">Confirmar</button></div></div></div>`;
+        modal.classList.remove('hidden');
+        const passField = modal.querySelector('#auth-pass');
+        const errorEl = modal.querySelector('#auth-error');
+        const closeModal = () => modal.classList.add('hidden');
+        modal.querySelector('#auth-cancel-btn').onclick = () => { closeModal(); resolve(false); };
+        modal.querySelector('#auth-confirm-btn').onclick = () => {
+            if (passField.value === '1234') { closeModal(); resolve(true); } 
+            else { errorEl.classList.remove('hidden'); }
+        };
+    });
+}
+
+async function openDeleteModal(id, type) {
+    const modal = document.getElementById('delete-modal');
+    let message = '', confirmAction = null;
+    switch (type) {
+        case 'student': message = '¿Confirmas la eliminación de este alumno?'; confirmAction = () => { allStudentsCache = allStudentsCache.filter(s => s.id !== id); }; break;
+        case 'expense': message = '¿Confirmas la eliminación de este egreso?'; confirmAction = () => { allExpensesCache = allExpensesCache.filter(e => e.id !== id); }; break;
+        case 'employee': message = '¿Confirmas la eliminación de este empleado?'; confirmAction = () => { allEmployeesCache = allEmployeesCache.filter(emp => emp.id !== id); }; break;
+    }
+    modal.innerHTML = `<div class="p-5 w-96 shadow-lg rounded-2xl bg-white"><h3 class="text-lg text-center">Eliminar Registro</h3><p class="text-sm text-gray-500 text-center mt-2">${message}</p><div class="flex justify-center gap-4 mt-6"><button class="px-4 py-2 bg-gray-200 rounded-md" onclick="document.getElementById('delete-modal').classList.add('hidden')">Cancelar</button><button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 text-white rounded-md">Eliminar</button></div></div>`;
+    modal.classList.remove('hidden');
+    modal.querySelector('#confirm-delete-btn').onclick = () => {
+        confirmAction();
+        saveAllDataToLocalStorage();
+        renderAllModules();
+        modal.classList.add('hidden');
+    };
+}
+
+window.viewExpenseReceipt = (id) => { const item = allExpensesCache.find(i => i.id === id); if (item && item.receiptData) { const win = window.open(); win.document.write(`<iframe src="${item.receiptData}" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;"></iframe>`); } }
+window.viewPayrollReceipt = (empId, payId) => { const emp = allEmployeesCache.find(e => e.id === empId); const payment = emp?.payments.find(p => p.id === payId); if (payment && payment.receiptData) { const win = window.open(); win.document.write(`<iframe src="${payment.receiptData}" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;"></iframe>`); } }
+window.viewGasReceipt = (id) => { const item = allGasRecordsCache.find(i => i.id === id); if (item && item.pdfData) { const win = window.open(); win.document.write(`<iframe src="${item.pdfData}" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;"></iframe>`); } }
+
+});
+        
     </script>
 </body>
 </html>
