@@ -1690,13 +1690,108 @@ function generateInvoice(studentId, paymentIndex) {
     modal.querySelector('#download-invoice-btn').onclick = () => downloadInvoiceAsPDF(student, installment);
 }
 
-// --- FINANZAS ---
-// ... (Pega aquí las funciones: openPayrollPaymentModal, openPayrollHistoryModal, etc. del script de finanzas)
-// ...
+// --- FINANZAS (EGRESOS Y NÓMINA) ---
+async function openPayrollPaymentModal(employeeId) {
+    const employee = allEmployeesCache.find(emp => emp.id === employeeId);
+    if (!employee) return;
+    const modal = document.getElementById('payroll-payment-modal');
+    modal.innerHTML = `
+    <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+        <h3 class="text-lg font-bold mb-4">Registrar Pago a ${employee.name}</h3>
+        <form id="payroll-payment-form" class="space-y-4">
+            <div><label for="payroll-amount" class="block text-sm">Monto ($)</label><input type="number" id="payroll-amount" required min="0.01" step="0.01" value="${employee.salary/2}" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+            <div><label for="payroll-date" class="block text-sm">Fecha</label><input type="date" id="payroll-date" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+            <div><label for="payroll-quincena" class="block text-sm">Quincena</label><select id="payroll-quincena" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"><option value="1">1ra Quincena</option><option value="2">2da Quincena</option></select></div>
+            <div><label class="block text-sm">Comprobante</label><input type="file" id="payroll-receipt-file" class="hidden"><button type="button" id="payroll-upload-btn" class="w-full mt-1 text-sm border py-2 rounded-md">Seleccionar Archivo</button><span id="payroll-file-name" class="text-xs text-gray-500 block mt-1"></span></div>
+            <div class="flex justify-end gap-2 pt-4"><button type="button" class="close-modal-btn px-4 py-2 bg-gray-200 rounded-md">Cancelar</button><button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md">Confirmar</button></div>
+        </form>
+    </div>`;
+    modal.classList.remove('hidden');
+    document.getElementById('payroll-date').valueAsDate = new Date();
+    modal.querySelector('.close-modal-btn').onclick = () => modal.classList.add('hidden');
+    modal.querySelector('#payroll-upload-btn').onclick = () => document.getElementById('payroll-receipt-file').click();
+    document.getElementById('payroll-receipt-file').onchange = () => handleFileUpload('payroll-receipt-file', 'payroll-file-name');
+    modal.querySelector('#payroll-payment-form').onsubmit = async (e) => {
+        e.preventDefault();
+        if (!await validateAction()) return;
+        let receiptData = null;
+        const fileInput = document.getElementById('payroll-receipt-file');
+        if (fileInput.files[0]) {
+            try { receiptData = await fileToBase64(fileInput.files[0]); } catch(err) { console.error("Error", err); return; }
+        }
+        const employeeIndex = allEmployeesCache.findIndex(emp => emp.id === employeeId);
+        if (employeeIndex > -1) {
+            allEmployeesCache[employeeIndex].payments.push({
+                id: 'pay_' + Date.now(),
+                amount: parseFloat(document.getElementById('payroll-amount').value),
+                date: new Date(document.getElementById('payroll-date').value + 'T12:00:00Z').toISOString(),
+                quincena: parseInt(document.getElementById('payroll-quincena').value),
+                receiptData
+            });
+            saveAllDataToLocalStorage();
+            renderAllModules();
+        }
+        modal.classList.add('hidden');
+    };
+}
+
+function openPayrollHistoryModal(employeeId) {
+    const employee = allEmployeesCache.find(emp => emp.id === employeeId);
+    if (!employee) return;
+    const modal = document.getElementById('payroll-history-modal');
+    let historyHTML = '<p class="text-center text-gray-500">No hay pagos registrados.</p>';
+    if (employee.payments.length > 0) {
+        historyHTML = [...employee.payments]
+            .sort((a,b) => new Date(b.date) - new Date(a.date))
+            .map(p => `
+            <li class="p-3 bg-gray-50 rounded-md">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-medium">${formatCurrency(p.amount)}</p>
+                        <p class="text-xs text-gray-500">${new Date(p.date).toLocaleDateString()} - ${p.quincena === 1 ? '1ra' : '2da'} Quincena</p>
+                    </div>
+                    ${p.receiptData ? `<button onclick="viewPayrollReceipt('${employee.id}', '${p.id}')" class="text-xs text-blue-500 hover:underline">Ver</button>` : ''}
+                </div>
+            </li>`).join('');
+    }
+    modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div class="p-6 border-b"><h3 class="text-xl font-bold">Historial de Pagos de ${employee.name}</h3></div>
+        <div class="p-6 overflow-y-auto"><ul class="space-y-3">${historyHTML}</ul></div>
+        <div class="p-4 bg-gray-50 text-right border-t"><button class="close-modal-btn px-4 py-2 bg-gray-200 rounded-md">Cerrar</button></div>
+    </div>`;
+    modal.classList.remove('hidden');
+    modal.querySelector('.close-modal-btn').onclick = () => modal.classList.add('hidden');
+}
+
+async function toggleEmployeeStatus(employeeId) {
+    if (!await validateAction()) return;
+    const employeeIndex = allEmployeesCache.findIndex(emp => emp.id === employeeId);
+    if (employeeIndex > -1) {
+        const currentStatus = allEmployeesCache[employeeIndex].status;
+        allEmployeesCache[employeeIndex].status = currentStatus === 'active' ? 'inactive' : 'active';
+        if (currentStatus === 'active') {
+            allEmployeesCache[employeeIndex].inactiveDate = new Date().toISOString();
+        } else {
+            delete allEmployeesCache[employeeIndex].inactiveDate;
+        }
+        saveAllDataToLocalStorage();
+        renderAllModules();
+    }
+}
 
 // --- GASOLINA ---
-// ... (Pega aquí las funciones: exportGasAnalysisToPDF del script de gasolina)
-// ...
+async function exportGasAnalysisToPDF() {
+    const { jsPDF } = window.jspdf;
+    const gasAnalysisElement = document.getElementById('gas-analysis-content-to-export');
+    gasAnalysisElement.style.backgroundColor = 'white';
+    const canvas = await html2canvas(gasAnalysisElement, { scale: 2 });
+    gasAnalysisElement.style.backgroundColor = '';
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation: 'l', unit: 'px', format: [canvas.width, canvas.height] });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save(`analisis-gasolina-${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`);
+}
 
 // #############################################################################
 // sección VII: FUNCIONES COMPARTIDAS Y GLOBALES
