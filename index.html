@@ -51,9 +51,10 @@
 
         <div class="mb-8 border-b border-gray-200">
             <nav id="main-tabs" class="-mb-px flex justify-center flex-wrap space-x-6" aria-label="Tabs">
-                <button class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="dashboard-general">Dashboard General</button>
+                <button class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="dashboard-general">Dashboard</button>
                 <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="alumnos">Alumnos</button>
-                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="finanzas">Finanzas</button>
+                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="egresos">Egresos</button>
+                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="nomina">Nómina</button>
                 <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="gasolina">Gasolina</button>
                 <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="proyecciones">Proyecciones</button>
             </nav>
@@ -74,28 +75,265 @@
             </div>
 
             <div id="alumnos-content" class="tab-content">
+                <div id="dashboard-tab">
+                    <h2 class="text-2xl font-semibold mb-6 text-center">Resumen por Programa</h2>
+                    <div id="dashboard-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+                    <div id="dashboard-loader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
+                    <div id="dashboard-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay datos para mostrar.</p></div>
+                    <h2 class="text-2xl font-semibold mb-6 mt-10 text-center">Resumen por Generación</h2>
+                    <div id="generation-dashboard-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
                 </div>
+                <div id="students-tab" class="mt-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                            <h2 class="text-xl font-semibold mb-4">Reporte Mensual de Pagos</h2>
+                            <button id="export-csv-btn" class="mb-4 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Exportar a CSV</button>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-4 mb-6">
+                            <div><label for="month-filter" class="text-sm font-medium">Mes:</label><select id="month-filter" class="rounded-lg border-gray-300"></select></div>
+                            <div><label for="year-filter" class="text-sm font-medium">Año:</label><select id="year-filter" class="rounded-lg border-gray-300"></select></div>
+                            <div><label for="program-filter" class="text-sm font-medium">Programa:</label><select id="program-filter" class="rounded-lg border-gray-300"><option value="Todos">Todos</option></select></div>
+                        </div>
+                        <div id="monthly-progress-container" class="flex flex-col md:flex-row items-center gap-8 p-4 bg-gray-50 rounded-lg">
+                            <div class="progress-circle" id="monthly-progress-circle"><span id="monthly-progress-text" class="progress-circle-inner text-gray-800">0%</span></div>
+                            <div class="flex-1 text-center md:text-left">
+                                <p class="text-gray-600">Progreso de Cobranza del Mes</p>
+                                <p class="text-2xl font-bold text-gray-900"><span id="monthly-collected"></span> / <span id="monthly-expected"></span></p>
+                            </div>
+                        </div>
+                        <div class="mt-6 overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Alumno</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Generación</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimiento</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monthly-report-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                            <div id="monthly-report-empty" class="text-center py-8 text-gray-500 hidden"><p>No hay pagos programados.</p></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                        <div class="xl:col-span-2 space-y-8">
+                            <div class="bg-white p-6 rounded-2xl shadow-lg">
+                                <h2 class="text-xl font-semibold mb-4">Agregar Alumno</h2>
+                                <form id="add-student-form" class="space-y-4">
+                                    <div><label for="student-name" class="block text-sm">Nombre</label><input type="text" id="student-name" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                    <div><label for="student-generation" class="block text-sm">Generación</label><input type="number" id="student-generation" required min="1" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                    <div><label for="student-institution" class="block text-sm">Institución</label><select id="student-institution" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"><option value="UDC">UDC</option><option value="IESM">IESM</option></select></div>
+                                    <div><label for="student-program" class="block text-sm">Programa</label><select id="student-program" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></select></div>
+                                    <div><label for="student-start-date" class="block text-sm">Fecha de Inicio</label><input type="date" id="student-start-date" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                    <div id="monthly-payment-section" class="space-y-4">
+                                        <div><label for="regular-monthly-amount" class="block text-sm">Costo Mensual Regular ($)</label><input type="number" id="regular-monthly-amount" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                        <div><label for="scholarship-percentage" class="block text-sm">Beca (%)</label><input type="number" id="scholarship-percentage" min="0" max="100" value="0" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                        <div><label for="monthly-amount" class="block text-sm text-gray-500">Monto a Pagar</label><input type="text" id="monthly-amount" disabled class="mt-1 block w-full bg-gray-200 p-3 rounded-lg font-bold"></div>
+                                        <div><label for="installments-number" class="block text-sm"># Mensualidades</label><input type="number" id="installments-number" required min="1" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                    </div>
+                                    <div class="flex items-center"><input type="checkbox" id="paid-in-full-checkbox" class="h-4 w-4"><label for="paid-in-full-checkbox" class="ml-2 block text-sm">Pago de Contado</label></div>
+                                    <div id="paid-in-full-details" class="hidden space-y-4">
+                                        <div><label for="total-cost" class="block text-sm">Costo Total ($)</label><input type="number" id="total-cost" min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                        <div><label for="program-duration" class="block text-sm">Duración (meses)</label><input type="number" id="program-duration" min="1" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                    </div>
+                                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Agregar Alumno</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
+                            <h2 class="text-xl font-semibold mb-4">Lista General de Alumnos</h2>
+                            <div id="students-loader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
+                            <div id="students-list-container" class="overflow-x-auto hidden">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gen.</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Institución</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progreso</th>
+                                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="students-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                                </table>
+                                <div id="students-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay alumnos registrados.</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <div id="finanzas-content" class="tab-content">
-                <div class="mb-8">
-                    <div class="border-b border-gray-200">
-                        <nav id="finanzas-tabs" class="-mb-px flex space-x-4" aria-label="Tabs">
-                            <button data-tab="egresos" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm">Egresos</button>
-                            <button data-tab="nomina" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm text-gray-500">Nómina</button>
-                        </nav>
+            <div id="egresos-content" class="tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div class="lg:col-span-1 space-y-8">
+                        <div class="bg-white p-6 rounded-2xl shadow-lg">
+                            <h2 class="text-xl font-semibold mb-4">Registrar Egreso</h2>
+                            <form id="add-expense-form" class="space-y-4">
+                                <div><label for="expense-date" class="block text-sm">Fecha</label><input type="date" id="expense-date" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="expense-provider" class="block text-sm">Proveedor</label><input type="text" id="expense-provider" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="expense-reference" class="block text-sm">Referencia</label><input type="text" id="expense-reference" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="expense-detail" class="block text-sm">Detalle</label><textarea id="expense-detail" rows="3" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></textarea></div>
+                                <div><label for="expense-amount" class="block text-sm">Monto ($)</label><input type="number" id="expense-amount" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="expense-concept" class="block text-sm">Concepto</label><input type="text" id="expense-concept" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="expense-company" class="block text-sm">Empresa</label><select id="expense-company" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"><option value="IESM">IESM</option><option value="UDC">UDC</option><option value="ISA">ISA</option><option value="Externo">Externo</option></select></div>
+                                <div><label for="expense-classification" class="block text-sm">Clasificación</label><input type="text" id="expense-classification" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label class="block text-sm">Comprobante</label><input type="file" id="expense-file" class="hidden"><button type="button" id="expense-upload-btn" class="w-full mt-1 text-sm border py-2 rounded-md">Seleccionar Archivo</button><span id="expense-file-name" class="text-xs text-gray-500 block mt-1"></span></div>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Registrar Egreso</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Historial de Egresos</h2>
+                        <div id="expense-list-container" class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor / Detalle</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th></tr></thead>
+                                <tbody id="expense-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                        <div id="expenses-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay egresos registrados.</p></div>
                     </div>
                 </div>
-                <div id="egresos-subcontent" class="tab-content active">
+                <div class="mt-8 bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-semibold mb-4 text-center">Análisis de Egresos</h2>
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <div><label for="expense-analysis-year-filter" class="text-sm">Año:</label><select id="expense-analysis-year-filter" class="rounded-lg"></select></div>
+                        <div><label for="expense-analysis-month-filter" class="text-sm">Mes:</label><select id="expense-analysis-month-filter" class="rounded-lg"></select></div>
+                        <div><label for="expense-company-filter" class="text-sm">Empresa:</label><select id="expense-company-filter" class="rounded-lg"></select></div>
+                        <div><label for="expense-concept-filter" class="text-sm">Concepto:</label><select id="expense-concept-filter" class="rounded-lg"></select></div>
+                        <div><label for="expense-classification-filter" class="text-sm">Clasificación:</label><select id="expense-classification-filter" class="rounded-lg"></select></div>
                     </div>
-                <div id="nomina-subcontent" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                        <div class="lg:col-span-1 text-center p-4 bg-red-50 rounded-lg"><p class="text-lg text-red-800">Total (Filtrado)</p><p id="expense-total-cost" class="text-3xl font-bold text-red-900 mt-1">$0.00</p></div>
+                        <div class="lg:col-span-2 bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg mb-4 text-center">Egresos por Concepto</h3><canvas id="expense-concept-chart"></canvas></div>
                     </div>
+                </div>
+            </div>
+
+            <div id="nomina-content" class="tab-content">
+                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div class="lg:col-span-1 space-y-8">
+                        <div class="bg-white p-6 rounded-2xl shadow-lg">
+                            <h2 class="text-xl font-semibold mb-4">Agregar Empleado</h2>
+                            <form id="add-employee-form" class="space-y-4">
+                                <div><label for="employee-name" class="block text-sm">Nombre</label><input type="text" id="employee-name" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="employee-position" class="block text-sm">Puesto</label><input type="text" id="employee-position" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="employee-department" class="block text-sm">Departamento</label><input type="text" id="employee-department" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="employee-company" class="block text-sm">Empresa</label><select id="employee-company" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"><option value="IESM">IESM</option><option value="UDC">UDC</option><option value="ISA">ISA</option><option value="Externo">Externo</option></select></div>
+                                <div><label for="employee-salary" class="block text-sm">Salario Mensual ($)</label><input type="number" id="employee-salary" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Agregar Empleado</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
+                        <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold">Nómina de Empleados</h2>
+                            <div class="flex items-center gap-4 mt-4 sm:mt-0">
+                                <label for="payroll-view-year" class="text-sm">Año:</label><select id="payroll-view-year" class="rounded-lg"></select>
+                                <label for="payroll-view-month" class="text-sm">Mes:</label><select id="payroll-view-month" class="rounded-lg"></select>
+                            </div>
+                        </div>
+                        <div id="payroll-progress-container" class="mb-6">
+                            <div class="flex justify-between mb-1"><span class="text-base font-medium text-blue-700">Progreso de Nómina Mensual</span><span id="payroll-progress-text" class="text-sm font-medium text-blue-700">0%</span></div>
+                            <div class="w-full bg-gray-200 rounded-full h-4"><div id="payroll-progress-bar" class="bg-blue-600 h-4 rounded-full" style="width: 0%"></div></div>
+                            <p id="payroll-progress-summary" class="text-xs text-right mt-1 text-gray-600"></p>
+                        </div>
+                        <div id="employee-list-container" class="space-y-4"></div>
+                        <div id="payroll-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay empleados registrados.</p></div>
+                    </div>
+                </div>
+                <div class="mt-8 bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-semibold mb-4 text-center">Análisis de Nómina</h2>
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <div><label for="payroll-analysis-year-filter" class="text-sm">Año:</label><select id="payroll-analysis-year-filter" class="rounded-lg"></select></div>
+                        <div><label for="payroll-analysis-month-filter" class="text-sm">Mes:</label><select id="payroll-analysis-month-filter" class="rounded-lg"></select></div>
+                        <div><label for="payroll-company-filter" class="text-sm">Empresa:</label><select id="payroll-company-filter" class="rounded-lg"></select></div>
+                        <div><label for="payroll-department-filter" class="text-sm">Departamento:</label><select id="payroll-department-filter" class="rounded-lg"></select></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                        <div class="lg:col-span-1 text-center p-4 bg-blue-50 rounded-lg"><p class="text-lg text-blue-800">Costo Total (Filtrado)</p><p id="payroll-total-cost" class="text-3xl font-bold text-blue-900 mt-1">$0.00</p></div>
+                        <div class="lg:col-span-2 bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg mb-4 text-center">Costo por Departamento</h3><canvas id="payroll-department-chart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="gasolina-content" class="tab-content">
+                <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                    <div class="xl:col-span-2 space-y-8">
+                        <div class="bg-white p-6 rounded-2xl shadow-lg">
+                            <h2 class="text-xl font-semibold mb-4">Registrar Gasto de Gasolina</h2>
+                            <form id="add-gas-form" class="space-y-4">
+                                <div><label for="gas-driver-select" class="block text-sm">Nombre</label><select id="gas-driver-select" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></select></div>
+                                <div id="gas-viaticos-details" class="hidden"><label for="gas-viaticos-name" class="block text-sm">Nombre para Viáticos</label><input type="text" id="gas-viaticos-name" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="gas-model-select" class="block text-sm">Auto</label><select id="gas-model-select" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></select></div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label for="gas-card" class="block text-sm"># Tarjeta</label><input type="text" id="gas-card" readonly class="mt-1 block w-full bg-gray-200 p-3 rounded-lg"></div>
+                                    <div><label for="gas-brand" class="block text-sm">Marca</label><input type="text" id="gas-brand" readonly class="mt-1 block w-full bg-gray-200 p-3 rounded-lg"></div>
+                                </div>
+                                <div><label for="gas-date" class="block text-sm">Fecha</label><input type="datetime-local" id="gas-date" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label for="gas-quantity" class="block text-sm">Cantidad (L)</label><input type="number" id="gas-quantity" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                    <div><label for="gas-price" class="block text-sm">Precio x Litro</label><input type="number" id="gas-price" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                </div>
+                                <div><label for="gas-subtotal" class="block text-sm">Subtotal ($)</label><input type="number" id="gas-subtotal" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label for="gas-iva" class="block text-sm text-gray-500">IVA (16%)</label><input type="text" id="gas-iva" readonly class="mt-1 block w-full bg-gray-200 p-3 rounded-lg font-bold"></div>
+                                <div><label for="gas-total" class="block text-sm">Total ($)</label><input type="number" id="gas-total" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
+                                <div><label class="block text-sm">Factura</label><input type="file" id="gas-file" class="hidden"><button type="button" id="gas-upload-btn" class="w-full mt-1 text-sm border py-2 rounded-md">Seleccionar Archivo</button><span id="gas-file-name" class="text-xs text-gray-500 block mt-1"></span></div>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Registrar Gasto</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Historial de Gastos</h2>
+                        <div id="gas-list-container" class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehículo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Factura</th></tr></thead>
+                                <tbody id="gas-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                            <div id="gas-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay gastos de gasolina.</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="gas-analysis-content-to-export" class="mt-8 bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold">Análisis de Gastos de Gasolina</h2>
+                        <button id="export-gas-pdf-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Exportar a PDF</button>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <div><label for="gas-analysis-year-filter" class="text-sm">Año:</label><select id="gas-analysis-year-filter" class="rounded-lg"></select></div>
+                        <div><label for="gas-analysis-month-filter" class="text-sm">Mes:</label><select id="gas-analysis-month-filter" class="rounded-lg"></select></div>
+                        <div><label for="gas-analysis-driver-filter" class="text-sm">Nombre:</label><select id="gas-analysis-driver-filter" class="rounded-lg"></select></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg text-center mb-4">Comparativa Mensual</h3><canvas id="gas-line-chart"></canvas></div>
+                        <div class="bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg text-center mb-4">Tabla Comparativa</h3><div id="gas-comparison-container" class="overflow-x-auto"></div></div>
+                    </div>
+                    <div id="gas-charts-container" class="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"></div>
+                    <div id="gas-charts-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay datos para mostrar.</p></div>
+                </div>
             </div>
             
-            <div id="gasolina-content" class="tab-content">
-                </div>
-            
             <div id="proyecciones-content" class="tab-content">
+                 <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-semibold mb-2 text-center">Análisis de Proyecciones</h2>
+                    <div id="projections-loader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
+                    <div id="projections-content" class="hidden">
+                        <h3 class="text-xl font-semibold mb-6 text-center text-gray-700">Resumen Financiero Global</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                            <div class="bg-blue-50 p-6 rounded-2xl"><h3 class="text-lg text-blue-800">Proyección Total</h3><p id="total-projected" class="text-3xl font-bold text-blue-900 mt-2">$0.00</p></div>
+                            <div class="bg-green-50 p-6 rounded-2xl"><h3 class="text-lg text-green-800">Total Recaudado</h3><p id="total-collected" class="text-3xl font-bold text-green-900 mt-2">$0.00</p></div>
+                            <div class="bg-yellow-50 p-6 rounded-2xl"><h3 class="text-lg text-yellow-800">Balance Pendiente</h3><p id="total-pending-balance" class="text-3xl font-bold text-yellow-900 mt-2">$0.00</p></div>
+                            <div class="bg-indigo-50 p-6 rounded-2xl"><h3 class="text-lg text-indigo-800">Ingreso Mensual Esperado</h3><p id="expected-monthly-income" class="text-3xl font-bold text-indigo-900 mt-2">$0.00</p></div>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-6 text-center mt-12 text-gray-700">Análisis Gráfico</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg text-center mb-4">Ingresos Mensuales (Año Actual)</h3><canvas id="monthlyComparisonChart"></canvas></div>
+                            <div class="bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg text-center mb-4">Ingresos Anuales</h3><canvas id="yearlyComparisonChart"></canvas></div>
+                        </div>
+                    </div>
                 </div>
+            </div>
         </main>
     </div>
 
@@ -1463,8 +1701,6 @@ async function handleStudentListClick(e) {
     }
 }
 
-// ... (Pega aquí las funciones: openPaymentsModal, generateInvoice, downloadInvoiceAsPDF, exportMonthlyReportToCSV, etc. del script de alumnos)
-// ... El código de estas funciones es largo, se pegará al final de este bloque.
 
 // --- 5.2 FINANZAS: Funciones de Interacción y Modales ---
 function handleExpenseListClick(e) {
@@ -1482,9 +1718,6 @@ function handleEmployeeListClick(e) {
     else if (button.classList.contains('toggle-status-employee-btn')) toggleEmployeeStatus(employeeId);
     else if (button.classList.contains('delete-employee-btn')) openDeleteModal(employeeId, 'employee');
 }
-
-// ... (Pega aquí las funciones: openPayrollPaymentModal, openPayrollHistoryModal, etc. del script de finanzas)
-// ... El código de estas funciones es largo, se pegará al final de este bloque.
 
 // --- 5.3 GASOLINA: Funciones de Interacción y Formularios ---
 function setupGasForm() {
