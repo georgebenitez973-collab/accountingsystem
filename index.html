@@ -29,12 +29,28 @@
             margin-bottom: 0.25rem;
             font-size: 0.875rem; /* sm */
         }
+        /* Clase para el bloque de egreso que se oculta/muestra por JS */
+        .egreso-fields {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            max-height: 700px; /* Suficiente para contener todos los campos */
+            opacity: 1;
+            overflow: hidden;
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+        /* Clase para ocultar el bloque con transición */
+        .egreso-fields.hidden-manual {
+            max-height: 0;
+            opacity: 0;
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+            border-top: none !important;
+        }
     </style>
 </head>
 <body>
 
     <!-- 0. Login Modal Overlay -->
-    <!-- Este overlay aparecerá por encima de la aplicación hasta que el login sea exitoso. -->
     <div id="login-modal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex items-center justify-center transition-opacity duration-300">
         <!-- Contenido del Modal de Login -->
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100">
@@ -59,7 +75,6 @@
     </div>
 
     <!-- Contenedor Principal de la Aplicación -->
-    <!-- Inicialmente oculto (hidden) hasta que el login sea exitoso -->
     <div id="app-container" class="hidden flex h-screen overflow-hidden">
 
         <!-- 1. Barra de Navegación Lateral (Sidebar) -->
@@ -104,6 +119,15 @@
                     onclick="switchTab('egresos')">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     Egresos
+                </button>
+                
+                <!-- Gasolina (Filtro de Egresos) -->
+                <button
+                    id="tab-gasolina"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onclick="switchTab('gasolina')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 2 2m-2-2v13.5M3 10h18M7 16h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v7a2 2 0 002 2z" /></svg>
+                    Gasolina
                 </button>
 
                 <!-- Separador de Grupo: Gestión -->
@@ -151,7 +175,7 @@
             <!-- Barra superior para el nombre de la pestaña actual y acciones -->
             <header class="mb-8 p-4 bg-white shadow rounded-lg flex justify-between items-center">
                 <h2 id="current-tab-title" class="text-3xl font-extrabold text-gray-800">Dashboard</h2>
-                <!-- Botón para abrir el modal de nueva transacción. Ahora solo se muestra en Ingresos/Egresos -->
+                <!-- Botón para abrir el modal de nueva transacción. Ahora solo se muestra en Ingresos/Egresos/Gasolina -->
                 <button id="add-transaction-button" onclick="showTransactionModal()" class="px-4 py-2 bg-emerald-500 text-white rounded-lg shadow-md hover:bg-emerald-600 transition-colors duration-200 hidden">
                     + Nueva Transacción
                 </button>
@@ -183,13 +207,18 @@
             <section id="content-egresos" class="tab-content hidden">
                 <!-- Contenido se actualizará por renderTransactionsList con filtro 'Egreso' -->
             </section>
+
+            <!-- Pestaña 4: Gasolina (NUEVA) -->
+            <section id="content-gasolina" class="tab-content hidden">
+                <!-- Contenido se actualizará por renderTransactionsList con filtro 'Egreso' y clasificación 'Gasolina' -->
+            </section>
             
-            <!-- Pestaña 4: Reportes -->
+            <!-- Pestaña 5: Reportes -->
             <section id="content-reports" class="tab-content hidden">
                  <!-- Este contenido será llenado por renderReports() -->
             </section>
 
-            <!-- Pestaña 5: Nómina (NUEVA) -->
+            <!-- Pestaña 6: Nómina (NUEVA) -->
             <section id="content-nomina" class="tab-content hidden">
                  <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                     <h3 class="text-xl font-semibold text-gray-700">Gestión de Nómina</h3>
@@ -197,7 +226,7 @@
                 </div>
             </section>
 
-            <!-- Pestaña 6: Pagos a Profesores (NUEVA) -->
+            <!-- Pestaña 7: Pagos a Profesores (NUEVA) -->
             <section id="content-profesores" class="tab-content hidden">
                  <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                     <h3 class="text-xl font-semibold text-gray-700">Registro de Pagos a Profesores</h3>
@@ -205,7 +234,7 @@
                 </div>
             </section>
 
-             <!-- Pestaña 7: Conciliación Bancaria (NUEVA) -->
+             <!-- Pestaña 8: Conciliación Bancaria (NUEVA) -->
             <section id="content-conciliacion" class="tab-content hidden">
                  <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                     <h3 class="text-xl font-semibold text-gray-700">Conciliación Bancaria</h3>
@@ -213,7 +242,7 @@
                 </div>
             </section>
 
-            <!-- Pestaña 8: Proyecciones (NUEVA) -->
+            <!-- Pestaña 9: Proyecciones (NUEVA) -->
             <section id="content-proyecciones" class="tab-content hidden">
                  <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                     <h3 class="text-xl font-semibold text-gray-700">Modelos de Proyección Financiera</h3>
@@ -237,7 +266,6 @@
                     
                     <div>
                         <label for="transaction-type" class="block text-sm font-medium text-gray-700">Tipo</label>
-                        <!-- CAMBIO: Este select será configurado por JS al abrir el modal para Ingreso o Egreso -->
                         <select id="transaction-type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
                             <option value="Ingreso">Ingreso</option>
                             <option value="Egreso">Egreso</option>
@@ -246,12 +274,13 @@
 
                     <div>
                         <label for="transaction-amount" class="block text-sm font-medium text-gray-700">Monto ($)</label>
-                        <input type="number" id="transaction-amount" step="0.01" required placeholder="0.00" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                        <!-- Deshabilitado para Gasolina, se calcula automáticamente -->
+                        <input type="number" id="transaction-amount" step="0.01" required placeholder="0.00" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100">
                     </div>
 
                     <div class="md:col-span-2">
-                        <label for="transaction-description" class="block text-sm font-medium text-gray-700">Descripción</label>
-                        <input type="text" id="transaction-description" required placeholder="Venta de servicio, Pago de renta, etc." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                        <label for="transaction-detalle" class="block text-sm font-medium text-gray-700">Detalle</label>
+                        <input type="text" id="transaction-detalle" required placeholder="Detalle general de la transacción" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
                     </div>
 
                     <div class="md:col-span-2">
@@ -259,9 +288,139 @@
                         <input type="date" id="transaction-date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
                     </div>
 
+                    <!-- Bloque de Campos Específicos de Egreso Estándar -->
+                    <div id="egreso-standard-fields" class="egreso-fields hidden-manual md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 mt-4 border-gray-100">
+                        <h4 class="md:col-span-2 text-md font-semibold text-gray-600 mb-2">Detalles Adicionales (Egreso Estándar)</h4>
+
+                        <!-- Proveedor/Solicitante -->
+                        <div>
+                            <label for="transaction-proveedor" class="block text-sm font-medium text-gray-700">Proveedor/Solicitante (Obligatorio)</label>
+                            <input type="text" id="transaction-proveedor" placeholder="Nombre del tercero" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                        
+                        <!-- Referencia de Pago -->
+                        <div>
+                            <label for="transaction-referencia" class="block text-sm font-medium text-gray-700">Referencia de Pago</label>
+                            <input type="text" id="transaction-referencia" placeholder="Cheque, transferencia, factura #" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+
+                        <!-- Concepto (Cuenta Contable) -->
+                        <div>
+                            <label for="transaction-concepto" class="block text-sm font-medium text-gray-700">Concepto (Cuenta Contable, Obligatorio)</label>
+                            <input type="text" id="transaction-concepto" placeholder="Arriendo, Servicios, Sueldos..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                        
+                        <!-- Empresa (Entidad) -->
+                        <div>
+                            <label for="transaction-empresa" class="block text-sm font-medium text-gray-700">Empresa (Entidad)</label>
+                            <input type="text" id="transaction-empresa" placeholder="Sede A, Sede B, General" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+
+                        <!-- Clasificación (Dropdown) -->
+                        <div class="md:col-span-2">
+                            <label for="transaction-clasificacion-standard" class="block text-sm font-medium text-gray-700">Clasificación</label>
+                            <select id="transaction-clasificacion-standard" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="Otros Egresos">Otros Egresos</option>
+                                <option value="Gastos Dr Conde">Gastos Dr Conde</option>
+                                <option value="Gastos Operativos">Gastos Operativos</option>
+                                <option value="Gastos Administrativos">Gastos Administrativos</option>
+                                <!-- Nota: La clasificación Gasolina se maneja en el bloque específico -->
+                            </select>
+                        </div>
+                    </div>
+                    <!-- FIN Bloque Egreso Estándar -->
+                    
+                    <!-- Bloque de Campos Específicos de Gasolina (NUEVO) -->
+                    <div id="egreso-gasolina-fields" class="egreso-fields hidden-manual md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 mt-4 border-gray-100">
+                        <h4 class="md:col-span-2 text-md font-semibold text-gray-600 mb-2">Registro de Factura de Gasolina</h4>
+
+                        <!-- Nombre (Selector para autocompletado de Tarjeta) -->
+                        <div>
+                            <label for="gasolina-nombre" class="block text-sm font-medium text-gray-700">Nombre</label>
+                            <select id="gasolina-nombre" class="calc-gasolina-auto mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="">-- Seleccionar Nombre --</option>
+                                <option value="Jorge">Jorge</option>
+                                <option value="María">María</option>
+                                <option value="Dulce">Dulce</option>
+                            </select>
+                        </div>
+                        
+                        <!-- #Tarjeta (Autocompletado) -->
+                        <div>
+                            <label for="gasolina-tarjeta" class="block text-sm font-medium text-gray-700"># Tarjeta / Clave</label>
+                            <input type="text" id="gasolina-tarjeta" placeholder="Autocompletado..." readonly class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100">
+                        </div>
+                        
+                        <!-- Auto (Selector para autocompletado de Marca) -->
+                        <div>
+                            <label for="gasolina-auto" class="block text-sm font-medium text-gray-700">Auto</label>
+                             <select id="gasolina-auto" class="calc-gasolina-auto mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="">-- Seleccionar Auto --</option>
+                                <option value="Sentra">Sentra</option>
+                                <option value="Spark">Spark</option>
+                                <option value="Pilot">Pilot</option>
+                            </select>
+                        </div>
+
+                        <!-- Marca (Autocompletado) -->
+                        <div>
+                            <label for="gasolina-marca" class="block text-sm font-medium text-gray-700">Marca</label>
+                            <input type="text" id="gasolina-marca" placeholder="Autocompletado..." readonly class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100">
+                        </div>
+                        
+                        <!-- Cantidad -->
+                        <div>
+                            <label for="gasolina-cantidad" class="block text-sm font-medium text-gray-700">Cantidad (Litros)</label>
+                            <input type="number" id="gasolina-cantidad" step="0.01" placeholder="0.00" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                        
+                        <!-- Precio -->
+                        <div>
+                            <label for="gasolina-precio" class="block text-sm font-medium text-gray-700">Precio (por Litro)</label>
+                            <input type="number" id="gasolina-precio" step="0.01" placeholder="0.00" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                        
+                        <!-- Subtotal (Ingreso Manual) -->
+                        <div>
+                            <label for="gasolina-subtotal" class="block text-sm font-medium text-gray-700 font-bold">SUBTOTAL (Ingreso Manual)</label>
+                            <input type="number" id="gasolina-subtotal" step="0.01" placeholder="0.00" class="calc-subtotal mt-1 block w-full px-3 py-2 border-2 border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-semibold text-gray-800">
+                        </div>
+                        
+                        <!-- IVA (Calculado) -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">IVA (16%)</label>
+                            <input type="text" id="gasolina-iva" readonly class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100 text-red-600 font-semibold">
+                        </div>
+
+                        <!-- Total (Calculado) -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">TOTAL (Monto Final)</label>
+                            <input type="text" id="gasolina-total" readonly class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100 text-2xl text-emerald-600 font-bold">
+                        </div>
+                        
+                        <!-- Forma de Pago -->
+                        <div class="md:col-span-2">
+                            <label for="gasolina-forma-pago" class="block text-sm font-medium text-gray-700">Forma de Pago</label>
+                            <select id="gasolina-forma-pago" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="Tarjeta de Credito">Tarjeta de Crédito</option>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Transferencia">Transferencia</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Adjuntar Comprobante -->
+                        <div class="md:col-span-2">
+                            <label for="gasolina-comprobante" class="block text-sm font-medium text-gray-700">Adjuntar Comprobante (PDF)</label>
+                            <input type="file" id="gasolina-comprobante" accept=".pdf" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                        </div>
+
+                    </div>
+                    <!-- FIN Bloque Egreso Gasolina -->
+
                     <!-- Campo oculto para el ID en caso de edición -->
                     <input type="hidden" id="transaction-id">
                     <input type="hidden" id="current-transaction-tab" value="ingresos"> <!-- Nuevo campo para rastrear la pestaña que abrió el modal -->
+                    <input type="hidden" id="gasolina-comprobante-url"> <!-- Para guardar la URL si se editara -->
                 </div>
                 
                 <div class="mt-6 flex justify-end space-x-3">
@@ -306,10 +465,27 @@
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
+        const IVA_RATE = 0.16; // 16% IVA para cálculos
+
         let app, db, auth, userId = null;
         let transactions = []; // Almacenará los datos de las transacciones
         let monthlyChart = null; // Variable para almacenar la instancia del gráfico
         let activeTab = 'dashboard'; // Nueva variable para rastrear la pestaña activa
+        
+        // --- MAPA DE DATOS FICTICIO PARA AUTOCOMPLETADO DE GASOLINA ---
+        const gasolinaDataMap = {
+            nombres: {
+                "Jorge": "6576",
+                "María": "9801",
+                "Dulce": "1234"
+            },
+            autos: {
+                "Sentra": "Nissan",
+                "Spark": "Chevrolet",
+                "Pilot": "Honda"
+            }
+        };
+
 
         // --- LÓGICA DE AUTENTICACIÓN DEMO ---
         const DEMO_USER = "Dulce";
@@ -376,6 +552,7 @@
                 // Actualiza todas las vistas dependientes
                 renderTransactionsList('ingresos');
                 renderTransactionsList('egresos');
+                renderTransactionsList('gasolina'); // Renderizar la nueva pestaña
                 updateDashboardSummary();
                 
                 // Solo si la pestaña de reportes está activa, la actualizamos
@@ -415,39 +592,97 @@
 
             const id = document.getElementById('transaction-id').value;
             const type = document.getElementById('transaction-type').value;
-            const amount = parseFloat(document.getElementById('transaction-amount').value);
-            const description = document.getElementById('transaction-description').value;
+            
+            const detalle = document.getElementById('transaction-detalle').value; 
             const date = document.getElementById('transaction-date').value;
 
-            if (isNaN(amount) || amount <= 0 || !description || !date) {
-                showTransactionMessage("Por favor, rellena todos los campos correctamente. El monto debe ser positivo."); 
+            if (!detalle || !date) {
+                showTransactionMessage("Por favor, rellena los campos básicos: Detalle y Fecha."); 
                 return;
+            }
+            
+            const isGasolina = (type === 'Egreso' && document.getElementById('egreso-gasolina-fields').classList.contains('active-fields'));
+
+            let amount;
+
+            if (isGasolina) {
+                // Para Gasolina, tomamos el Total calculado
+                amount = parseFloat(document.getElementById('gasolina-total').value.replace('$', '').replace(',', '')) || 0;
+            } else {
+                // Para Ingreso/Egreso Estándar, tomamos el Monto manual
+                amount = parseFloat(document.getElementById('transaction-amount').value);
+            }
+
+            if (isNaN(amount) || amount <= 0) {
+                 showTransactionMessage("El Monto Total (o Monto, si no es Gasolina) debe ser positivo."); 
+                 return;
             }
 
             const transactionData = {
                 type: type,
-                amount: amount,
-                description: description,
+                detalle: detalle, 
                 date: date,
-                // Usamos el timestamp para un ordenamiento secundario si es necesario
-                timestamp: Date.now() 
+                timestamp: Date.now(),
+                amount: amount // Monto final, sea manual o calculado
             };
+            
+            if (type === 'Egreso') {
+                if (isGasolina) {
+                    // --- Guardado de Transacción de GASOLINA ---
+                    
+                    transactionData.clasificacion = 'Gasolina';
+                    
+                    // Campos específicos
+                    transactionData.nombre = document.getElementById('gasolina-nombre').value.trim();
+                    transactionData.tarjeta = document.getElementById('gasolina-tarjeta').value.trim();
+                    transactionData.marca = document.getElementById('gasolina-marca').value.trim();
+                    transactionData.auto = document.getElementById('gasolina-auto').value.trim();
+                    transactionData.cantidad = parseFloat(document.getElementById('gasolina-cantidad').value) || 0;
+                    transactionData.precio = parseFloat(document.getElementById('gasolina-precio').value) || 0;
+                    
+                    // Montos calculados/ingresados
+                    transactionData.subtotal = parseFloat(document.getElementById('gasolina-subtotal').value) || 0;
+                    transactionData.iva = parseFloat(document.getElementById('gasolina-iva').value.replace('$', '').replace(',', '')) || 0;
+                    transactionData.total = amount; // Ya se verificó que es > 0
+                    
+                    transactionData.formaPago = document.getElementById('gasolina-forma-pago').value;
+                    
+                    // Simular manejo de comprobante (solo la URL/nombre)
+                    const comprobanteFile = document.getElementById('gasolina-comprobante').files[0];
+                    if (comprobanteFile) {
+                        transactionData.comprobanteUrl = `gs://storage-path/${id || 'new'}-${comprobanteFile.name}`;
+                    } else {
+                        transactionData.comprobanteUrl = document.getElementById('gasolina-comprobante-url').value;
+                    }
+
+
+                } else {
+                    // --- Guardado de Transacción de EGRESO ESTÁNDAR ---
+                    transactionData.proveedor = document.getElementById('transaction-proveedor').value.trim();
+                    transactionData.referencia = document.getElementById('transaction-referencia').value.trim();
+                    transactionData.concepto = document.getElementById('transaction-concepto').value.trim();
+                    transactionData.empresa = document.getElementById('transaction-empresa').value.trim();
+                    transactionData.clasificacion = document.getElementById('transaction-clasificacion-standard').value;
+                    
+                    // Validación para campos obligatorios de Egreso Estándar
+                    if (!transactionData.proveedor || !transactionData.concepto) {
+                        showTransactionMessage("Para Egresos estándar, el Proveedor/Solicitante y el Concepto son obligatorios.");
+                        return;
+                    }
+                }
+            }
 
             const transactionsRef = getTransactionsCollectionRef();
             if (!transactionsRef) return;
 
             try {
                 if (id) {
-                    // Editar transacción existente
                     await setDoc(doc(transactionsRef, id), transactionData);
                     showTransactionMessage("Transacción actualizada con éxito.", false);
                 } else {
-                    // Agregar nueva transacción
                     await addDoc(transactionsRef, transactionData);
                     showTransactionMessage("Nueva transacción agregada con éxito.", false);
                 }
-
-                // Dar tiempo para que el mensaje se vea antes de cerrar el modal
                 setTimeout(hideTransactionModal, 1500); 
             } catch (e) {
                 showTransactionMessage(`Error al guardar la transacción: ${e.message}`);
@@ -460,18 +695,55 @@
             const transaction = transactions.find(t => t.id === id);
             if (!transaction) return;
 
-            // Llenar el formulario con los datos de la transacción
+            // Llenar campos básicos
             document.getElementById('transaction-id').value = transaction.id;
             document.getElementById('transaction-type').value = transaction.type;
             document.getElementById('transaction-amount').value = transaction.amount;
-            document.getElementById('transaction-description').value = transaction.description;
+            document.getElementById('transaction-detalle').value = transaction.detalle || ''; 
             document.getElementById('transaction-date').value = transaction.date;
-            // Configurar el campo oculto para que al guardar sepa a qué tab volver (aunque el listener lo gestiona)
-            document.getElementById('current-transaction-tab').value = transaction.type === 'Ingreso' ? 'ingresos' : 'egresos';
-
+            
+            // Configurar el campo oculto para que el modal sepa qué tipo es al reabrirse
+            let tabToOpen = 'ingresos';
+            if (transaction.type === 'Ingreso') {
+                tabToOpen = 'ingresos';
+            } else if (transaction.type === 'Egreso' && transaction.clasificacion === 'Gasolina') {
+                 tabToOpen = 'gasolina';
+            } else {
+                tabToOpen = 'egresos';
+            }
+            document.getElementById('current-transaction-tab').value = tabToOpen;
 
             document.getElementById('modal-title').textContent = "Editar Transacción";
-            window.showTransactionModal();
+            
+            // Cargar campos específicos
+            if (transaction.type === 'Egreso') {
+                if (transaction.clasificacion === 'Gasolina') {
+                    // Cargar campos de Gasolina
+                    document.getElementById('gasolina-nombre').value = transaction.nombre || '';
+                    document.getElementById('gasolina-tarjeta').value = transaction.tarjeta || '';
+                    document.getElementById('gasolina-marca').value = transaction.marca || '';
+                    document.getElementById('gasolina-auto').value = transaction.auto || '';
+                    document.getElementById('gasolina-cantidad').value = transaction.cantidad || '';
+                    document.getElementById('gasolina-precio').value = transaction.precio || '';
+                    document.getElementById('gasolina-forma-pago').value = transaction.formaPago || 'Tarjeta de Credito';
+                    document.getElementById('gasolina-comprobante-url').value = transaction.comprobanteUrl || '';
+                    
+                    // Cargar montos y recalcular (El subtotal es el que se ingresa manualmente)
+                    document.getElementById('gasolina-subtotal').value = transaction.subtotal ? transaction.subtotal.toFixed(2) : (transaction.amount / (1 + IVA_RATE)).toFixed(2);
+                    calculateGasolinaTotals();
+
+                } else {
+                    // Cargar campos de Egreso Estándar
+                    document.getElementById('transaction-proveedor').value = transaction.proveedor || '';
+                    document.getElementById('transaction-referencia').value = transaction.referencia || '';
+                    document.getElementById('transaction-concepto').value = transaction.concepto || '';
+                    document.getElementById('transaction-empresa').value = transaction.empresa || '';
+                    document.getElementById('transaction-clasificacion-standard').value = transaction.clasificacion || 'Otros Egresos';
+                }
+            }
+
+            // Mostrar modal con bandera de edición
+            window.showTransactionModal(true); 
         };
 
         // Función para eliminar: usa el modal de confirmación
@@ -488,7 +760,6 @@
                 }
             };
             
-            // Usar el modal de confirmación personalizado
             showConfirmModal("Eliminar Transacción", "¿Estás seguro de que quieres eliminar esta transacción? Esta acción es irreversible.", action);
         };
 
@@ -496,43 +767,185 @@
         const formatCurrency = (value) => `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
         const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+        /**
+         * Calcula el IVA y el Total a partir del Subtotal (Ingreso manual).
+         */
+        const calculateGasolinaTotals = () => {
+            // Se toma el Subtotal ingresado manualmente
+            const subtotalInput = document.getElementById('gasolina-subtotal').value;
+            const subtotal = parseFloat(subtotalInput) || 0;
+            
+            if (subtotal <= 0) {
+                 document.getElementById('gasolina-iva').value = formatCurrency(0);
+                 document.getElementById('gasolina-total').value = formatCurrency(0);
+                 document.getElementById('transaction-amount').value = 0;
+                 return;
+            }
+
+            const iva = subtotal * IVA_RATE;
+            const total = subtotal + iva;
+
+            document.getElementById('gasolina-iva').value = formatCurrency(iva);
+            document.getElementById('gasolina-total').value = formatCurrency(total);
+            
+            // Sincronizar el Monto general (transaction-amount) con el Total
+            document.getElementById('transaction-amount').value = total.toFixed(2);
+        };
+        
+        /**
+         * Autocompleta los campos de Tarjeta y Marca según la selección.
+         */
+        window.autoCompleteGasolinaFields = () => {
+            const nombre = document.getElementById('gasolina-nombre').value;
+            const auto = document.getElementById('gasolina-auto').value;
+            
+            // Autocompletar Tarjeta por Nombre
+            const tarjeta = gasolinaDataMap.nombres[nombre] || '';
+            document.getElementById('gasolina-tarjeta').value = tarjeta;
+
+            // Autocompletar Marca por Auto
+            const marca = gasolinaDataMap.autos[auto] || '';
+            document.getElementById('gasolina-marca').value = marca;
+        };
+
+
         // --- RENDERIZADO DE VISTAS ---
 
         /**
-         * Función para renderizar la tabla de transacciones, filtrando por tipo.
-         * @param {('ingresos'|'egresos')} transactionType - La pestaña a renderizar.
+         * Función para renderizar la tabla de transacciones.
+         * @param {('ingresos'|'egresos'|'gasolina')} tabName - La pestaña a renderizar.
          */
-        const renderTransactionsList = (transactionType) => {
-            const contentId = `content-${transactionType}`;
+        const renderTransactionsList = (tabName) => {
+            const contentId = `content-${tabName}`;
             const content = document.getElementById(contentId);
             if (!content) return;
 
-            // Determinar el tipo de transacción para el filtro
-            const requiredType = capitalize(transactionType).slice(0, -1); // 'Ingreso' o 'Egreso'
-            const filteredTransactions = transactions.filter(t => t.type === requiredType);
+            let title, requiredType, requiredClassification = null;
 
-            // Contenido de la pestaña Ingresos/Egresos
+            if (tabName === 'ingresos') {
+                title = 'Listado de Ingresos';
+                requiredType = 'Ingreso';
+            } else if (tabName === 'egresos') {
+                title = 'Listado de Egresos Estándar';
+                requiredType = 'Egreso';
+                requiredClassification = '!Gasolina'; // Mostrar todo EXCEPTO Gasolina
+            } else if (tabName === 'gasolina') {
+                title = 'Gastos de Gasolina (Egreso Detallado)';
+                requiredType = 'Egreso';
+                requiredClassification = 'Gasolina';
+            } else {
+                return;
+            }
+
+            let filteredTransactions = transactions.filter(t => t.type === requiredType);
+
+            if (requiredClassification) {
+                if (requiredClassification === '!Gasolina') {
+                    // Filtrar por todo lo que NO sea Gasolina
+                    filteredTransactions = filteredTransactions.filter(t => t.clasificacion !== 'Gasolina' || !t.clasificacion);
+                } else {
+                    // Filtrar por la clasificación específica (e.g., 'Gasolina')
+                    filteredTransactions = filteredTransactions.filter(t => t.clasificacion === requiredClassification);
+                }
+            }
+            
+            let tableHeaders, tableBodyMapper;
+
+            if (requiredType === 'Ingreso') {
+                tableHeaders = `
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                `;
+                tableBodyMapper = (t) => `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${t.date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${t.detalle || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600 font-semibold">
+                            ${formatCurrency(t.amount)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                            <button onclick="editTransaction('${t.id}')" class="text-blue-600 hover:text-blue-900 transition-colors">Editar</button>
+                            <button onclick="deleteTransaction('${t.id}')" class="text-red-600 hover:text-red-900 transition-colors">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            } else if (tabName === 'gasolina') { // Egreso Gasolina
+                tableHeaders = `
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conductor / Auto</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cant.</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">TOTAL</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">FP</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                `;
+                 tableBodyMapper = (t) => `
+                    <tr>
+                        <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${t.date}</td>
+                        <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-900">${t.nombre || 'N/A'} / ${t.auto || 'N/A'}</td>
+                        <td class="px-3 py-4 whitespace-nowrap text-right text-sm text-gray-700">${(t.cantidad || 0).toFixed(2)}</td>
+                        <td class="px-3 py-4 whitespace-nowrap text-right text-sm text-gray-700">${formatCurrency(t.subtotal || 0)}</td>
+                        <td class="px-3 py-4 whitespace-nowrap text-right text-sm text-gray-700">${formatCurrency(t.iva || 0)}</td>
+                        <td class="px-3 py-4 whitespace-nowrap text-right text-sm text-red-600 font-semibold">
+                            ${formatCurrency(t.total || t.amount)}
+                        </td>
+                         <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-600">${t.formaPago || 'N/A'}</td>
+                        <td class="px-3 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                            <button onclick="editTransaction('${t.id}')" class="text-blue-600 hover:text-blue-900 transition-colors">Editar</button>
+                            <button onclick="deleteTransaction('${t.id}')" class="text-red-600 hover:text-red-900 transition-colors">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            } else { // Egreso Estándar
+                tableHeaders = `
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor/Solicitante</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concepto</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clasificación</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                `;
+                tableBodyMapper = (t) => `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${t.date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${t.proveedor || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${t.concepto || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                ${t.clasificacion || 'N/A'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-red-600 font-semibold">
+                            ${formatCurrency(t.amount)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                            <button onclick="editTransaction('${t.id}')" class="text-blue-600 hover:text-blue-900 transition-colors">Editar</button>
+                            <button onclick="deleteTransaction('${t.id}')" class="text-red-600 hover:text-red-900 transition-colors">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            // 3. Renderizar HTML
             content.innerHTML = `
                 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 overflow-x-auto">
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Listado de ${capitalize(transactionType)}</h3>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">${title}</h3>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                            </tr>
+                            <tr>${tableHeaders}</tr>
                         </thead>
-                        <tbody id="transactions-table-body-${transactionType}" class="bg-white divide-y divide-gray-200">
+                        <tbody id="transactions-table-body-${tabName}" class="bg-white divide-y divide-gray-200">
                             <!-- Filas inyectadas por JS -->
                         </tbody>
                     </table>
-                    ${filteredTransactions.length === 0 ? '<p class="px-6 py-4 text-center text-gray-500">No hay transacciones registradas de este tipo.</p>' : ''}
+                    ${filteredTransactions.length === 0 ? `<p class="px-6 py-4 text-center text-gray-500">No hay ${title.toLowerCase().split('de ')[1] || 'transacciones'} registradas.</p>` : ''}
                 </div>
             `;
             
-            const tbody = document.getElementById(`transactions-table-body-${transactionType}`);
+            const tbody = document.getElementById(`transactions-table-body-${tabName}`);
             if (!tbody) return;
 
             // Ordenar por fecha (más reciente primero)
@@ -545,27 +958,8 @@
                 return b.timestamp - a.timestamp;
             });
 
-            tbody.innerHTML = sortedTransactions.map(t => {
-                const isIncome = t.type === 'Ingreso';
-                const amountClass = isIncome ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
-                const formattedAmount = formatCurrency(t.amount); 
-                
-                return `
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${t.date}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${t.description}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm ${amountClass}">
-                            ${formattedAmount}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                            <button onclick="editTransaction('${t.id}')" class="text-blue-600 hover:text-blue-900 transition-colors">Editar</button>
-                            <button onclick="deleteTransaction('${t.id}')" class="text-red-600 hover:text-red-900 transition-colors">Eliminar</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            tbody.innerHTML = sortedTransactions.map(tableBodyMapper).join('');
         };
-
 
         // Función para actualizar el resumen del Dashboard
         const updateDashboardSummary = () => {
@@ -611,8 +1005,9 @@
             `;
         };
 
-        // Función para renderizar la pestaña de Reportes
+        // Función para renderizar la pestaña de Reportes (mantenida igual)
         const renderReports = () => {
+            // ... (Lógica de Reportes sin cambios, usa los mismos totales) ...
             // 1. Agrupar transacciones por mes y año
             const monthlyData = transactions.reduce((acc, t) => {
                 // Formato YYYY-MM
@@ -741,23 +1136,111 @@
         
         // --- LÓGICA DE MODALES (Transacción y Confirmación) ---
         
-        window.showTransactionModal = () => {
-            // Obtener el tipo de transacción preseleccionado basado en la pestaña activa
-            const currentTab = document.getElementById('current-transaction-tab').value;
+        window.showTransactionModal = (isEditing = false) => {
             const transactionTypeSelect = document.getElementById('transaction-type');
+            const egresoStandardDiv = document.getElementById('egreso-standard-fields');
+            const egresoGasolinaDiv = document.getElementById('egreso-gasolina-fields');
+            const transactionAmountInput = document.getElementById('transaction-amount');
             
-            // Limpiar el formulario y prepararlo para una nueva transacción
-            document.getElementById('transaction-form').reset();
-            document.getElementById('transaction-id').value = '';
-            document.getElementById('transaction-date').valueAsDate = new Date(); 
-            document.getElementById('modal-title').textContent = "Nueva Transacción";
-            document.getElementById('transaction-message').classList.add('hidden'); 
+            // Limpiar formulario y reiniciar campos obligatorios si no estamos editando
+            if (!isEditing) {
+                document.getElementById('transaction-form').reset();
+                document.getElementById('transaction-id').value = '';
+                document.getElementById('transaction-date').valueAsDate = new Date(); 
+                document.getElementById('modal-title').textContent = "Nueva Transacción";
+                document.getElementById('transaction-message').classList.add('hidden'); 
+                calculateGasolinaTotals(); // Reiniciar cálculos de Gasolina
+            }
+            
+            // 1. Determinar el tipo inicial basado en la pestaña activa
+            let determinedType = transactionTypeSelect.value;
+            const currentTab = document.getElementById('current-transaction-tab').value;
 
-            // Asegurar que el select refleje la pestaña desde donde se abrió
-            if (currentTab === 'ingresos') {
-                transactionTypeSelect.value = 'Ingreso';
-            } else if (currentTab === 'egresos') {
-                transactionTypeSelect.value = 'Egreso';
+            if (!isEditing) {
+                if (currentTab === 'ingresos') {
+                    determinedType = 'Ingreso';
+                } else if (currentTab === 'egresos' || currentTab === 'gasolina') {
+                    determinedType = 'Egreso';
+                }
+                transactionTypeSelect.value = determinedType;
+            }
+
+            // 2. Toggle visibility and set required status
+            const toggleFields = (type) => {
+                const isEgreso = type === 'Egreso';
+                // La pestaña activa determina si debe verse el formulario detallado de Gasolina
+                const isGasolinaTab = isEgreso && currentTab === 'gasolina'; 
+                
+                // --- Configuración de campos generales ---
+                transactionAmountInput.disabled = isGasolinaTab; // Deshabilitar monto si es Gasolina
+                transactionAmountInput.required = !isGasolinaTab; // Requerir monto si es Ingreso o Egreso Estándar
+                
+                // --- Toggle bloques ---
+                if (isGasolinaTab) {
+                    // Mostrar Gasolina, Ocultar Estándar
+                    egresoGasolinaDiv.classList.remove('hidden-manual');
+                    egresoGasolinaDiv.classList.add('active-fields');
+                    egresoStandardDiv.classList.add('hidden-manual');
+                    egresoStandardDiv.classList.remove('active-fields');
+                    
+                    // Solo requerimos el Subtotal
+                    document.getElementById('gasolina-subtotal').required = true;
+
+                    // Remover obligatoriedad de campos de Egreso Estándar
+                    document.getElementById('transaction-proveedor').required = false;
+                    document.getElementById('transaction-concepto').required = false;
+
+                } else if (isEgreso) {
+                    // Mostrar Estándar, Ocultar Gasolina
+                    egresoStandardDiv.classList.remove('hidden-manual');
+                    egresoStandardDiv.classList.add('active-fields');
+                    egresoGasolinaDiv.classList.add('hidden-manual');
+                    egresoGasolinaDiv.classList.remove('active-fields');
+                    
+                    // Hacer obligatorios los campos clave de Egreso Estándar
+                    document.getElementById('transaction-proveedor').required = true;
+                    document.getElementById('transaction-concepto').required = true;
+                    
+                    // Remover obligatoriedad de Gasolina
+                    document.getElementById('gasolina-subtotal').required = false;
+
+                } else { // Ingreso
+                    // Ocultar ambos
+                    egresoStandardDiv.classList.add('hidden-manual');
+                    egresoStandardDiv.classList.remove('active-fields');
+                    egresoGasolinaDiv.classList.add('hidden-manual');
+                    egresoGasolinaDiv.classList.remove('active-fields');
+                    
+                    // Remover obligatoriedad de campos de egreso
+                    document.getElementById('transaction-proveedor').required = false;
+                    document.getElementById('transaction-concepto').required = false;
+                    document.getElementById('gasolina-subtotal').required = false;
+                }
+            };
+            
+            toggleFields(determinedType);
+            
+            // 3. Listener para cambios manuales en el select
+            transactionTypeSelect.onchange = () => {
+                // Si el usuario cambia manualmente el tipo, asumimos que sale de la vista específica
+                if (transactionTypeSelect.value === 'Egreso') {
+                    document.getElementById('current-transaction-tab').value = 'egresos'; // Vuelve a la vista estándar
+                } else {
+                    document.getElementById('current-transaction-tab').value = 'ingresos';
+                }
+                toggleFields(transactionTypeSelect.value);
+            };
+
+            // 4. Agregar listeners de cálculo para Subtotal de Gasolina
+            document.querySelectorAll('.calc-subtotal').forEach(input => {
+                input.oninput = calculateGasolinaTotals;
+            });
+            
+            // 5. Agregar listeners de autocompletado (solo si es la pestaña de gasolina)
+            if (currentTab === 'gasolina') {
+                 autoCompleteGasolinaFields(); // Ejecutar al cargar la edición
+                 document.getElementById('gasolina-nombre').onchange = autoCompleteGasolinaFields;
+                 document.getElementById('gasolina-auto').onchange = autoCompleteGasolinaFields;
             }
             
             document.getElementById('transaction-modal').classList.remove('hidden');
@@ -863,14 +1346,14 @@
         // Función global para cambiar de pestaña/vista
         window.switchTab = (tabName) => {
             // Lista de todas las pestañas
-            const tabs = ['dashboard', 'ingresos', 'egresos', 'reports', 'nomina', 'profesores', 'conciliacion', 'proyecciones'];
+            const tabs = ['dashboard', 'ingresos', 'egresos', 'gasolina', 'reports', 'nomina', 'profesores', 'conciliacion', 'proyecciones'];
             activeTab = tabName; // Actualizar la pestaña activa
 
             // Lógica para mostrar/ocultar el botón de "Nueva Transacción"
             const addButton = document.getElementById('add-transaction-button');
             const transactionTabField = document.getElementById('current-transaction-tab');
             
-            if (tabName === 'ingresos' || tabName === 'egresos') {
+            if (tabName === 'ingresos' || tabName === 'egresos' || tabName === 'gasolina') {
                 addButton.classList.remove('hidden');
                 // Almacenar la pestaña actual en un campo oculto del modal para preseleccionar el tipo de transacción
                 transactionTabField.value = tabName; 
@@ -899,6 +1382,8 @@
                     renderTransactionsList('ingresos');
                 } else if (tabName === 'egresos') {
                     renderTransactionsList('egresos');
+                } else if (tabName === 'gasolina') {
+                    renderTransactionsList('gasolina');
                 } else if (tabName === 'reports' && transactions.length > 0) {
                     renderReports();
                 }
