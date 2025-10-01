@@ -3,862 +3,809 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Gestión Integral</title>
+    <title>Sistema Contable Modular</title>
+    <!-- Carga de Tailwind CSS para estilos responsivos y modernos -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Carga de Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .tab-btn.active { border-bottom-color: #3b82f6; color: #3b82f6; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .student-inactive { opacity: 0.6; background-color: #f3f4f6; }
-        .student-inactive td:first-child .text-gray-900 { text-decoration: line-through; }
-        .employee-inactive { opacity: 0.5; }
-        .progress-circle { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(#4ade80 var(--p, 0%), #e5e7eb 0); transition: background 0.3s; }
-        .progress-circle-inner { font-size: 1.5rem; font-weight: bold; }
-        .status-overdue { background-color: #fee2e2; color: #b91c1c; font-weight: bold; }
-        @media print {
-            body * { visibility: hidden; }
-            #invoice-content, #invoice-content * { visibility: visible; }
-            #invoice-content { position: absolute; left: 0; top: 0; width: 100%; }
+        /* Configuraciones básicas para la tipografía */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fc;
+        }
+        /* Estilo para el botón de la pestaña activa */
+        .tab-active {
+            background-color: #10b981; /* Esmeralda 500 */
+            color: white;
+            font-weight: 600;
+            border-left: 4px solid #059669; /* Esmeralda 600 */
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body>
 
-    <div id="login-wrapper" class="min-h-screen flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
-            <form id="login-form" class="space-y-4">
-                <div><label for="login-user" class="block text-sm font-medium text-gray-700">Usuario</label><input type="text" id="login-user" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3" value="Dulce"></div>
-                <div><label for="login-pass" class="block text-sm font-medium text-gray-700">Contraseña</label><input type="password" id="login-pass" required class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-lg p-3"></div>
-                <p id="login-error" class="text-red-500 text-sm text-center hidden">Credenciales incorrectas.</p>
-                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Entrar</button>
+    <!-- 0. Login Modal Overlay -->
+    <!-- Este overlay aparecerá por encima de la aplicación hasta que el login sea exitoso. -->
+    <div id="login-modal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex items-center justify-center transition-opacity duration-300">
+        <!-- Contenido del Modal de Login -->
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
+            <div id="login-message" class="hidden p-3 mb-4 text-sm rounded-lg text-red-700 bg-red-100 font-medium border border-red-200"></div>
+
+            <label for="login-username" class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+            <!-- El valor está vacío, usa Dulce para la demo -->
+            <input type="text" id="login-username" placeholder="Nombre de usuario" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 mb-4">
+
+            <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+            <!-- El valor está vacío, usa 1234 para la demo -->
+            <input type="password" id="login-password" placeholder="Contraseña" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 mb-6" onkeyup="if(event.key === 'Enter') handleLogin()">
+
+            <button onclick="handleLogin()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg transition-colors duration-200 shadow-lg transform hover:scale-[1.01]">
+                Acceder
+            </button>
+
+            <!-- Se mantiene la información de las credenciales de demo para el usuario -->
+            <p class="text-center text-xs text-gray-500 mt-4">Credenciales de Demo: Usuario: <code class="font-bold text-gray-700">Dulce</code>, Contraseña: <code class="font-bold text-gray-700">1234</code></p>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la Aplicación -->
+    <!-- Inicialmente oculto (hidden) hasta que el login sea exitoso -->
+    <div id="app-container" class="hidden flex h-screen overflow-hidden">
+
+        <!-- 1. Barra de Navegación Lateral (Sidebar) -->
+        <aside class="w-64 bg-white shadow-xl flex flex-col transition-all duration-300">
+            <div class="p-6 border-b border-gray-100">
+                <h1 class="text-2xl font-bold text-gray-800">Caja Pro</h1>
+                <p class="text-xs text-gray-500 mt-1">App Contable</p>
+            </div>
+
+            <!-- Menú de Pestañas -->
+            <nav class="flex-grow p-4 space-y-2">
+                <!-- Pestaña 1: Dashboard (por defecto) -->
+                <button
+                    id="tab-dashboard"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 tab-active"
+                    onclick="switchTab('dashboard')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Dashboard
+                </button>
+
+                <!-- Pestaña 2: Transacciones (Funcionalidad principal) -->
+                <button
+                    id="tab-transactions"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onclick="switchTab('transactions')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 2v2m0 2v2m0 2v2M4 12h16" />
+                    </svg>
+                    Transacciones
+                </button>
+
+                <!-- Pestaña 3: Reportes (Implementación en este bloque) -->
+                <button
+                    id="tab-reports"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onclick="switchTab('reports')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l-2 2m4 0l2-2v13m7-6h-2M4 6h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" />
+                    </svg>
+                    Reportes
+                </button>
+            </nav>
+
+            <!-- Información del Usuario/ID (MANDATORIO para apps colaborativas) -->
+            <div class="p-4 border-t border-gray-100 text-xs bg-gray-50">
+                <p class="font-semibold text-gray-600">ID de Usuario (UID):</p>
+                <code id="user-id-display" class="block w-full text-xs text-gray-500 truncate mt-1">Cargando...</code>
+            </div>
+        </aside>
+
+        <!-- 2. Área de Contenido Principal -->
+        <main class="flex-1 overflow-y-auto p-8">
+            <!-- Barra superior para el nombre de la pestaña actual y acciones -->
+            <header class="mb-8 p-4 bg-white shadow rounded-lg flex justify-between items-center">
+                <h2 id="current-tab-title" class="text-3xl font-extrabold text-gray-800">Dashboard</h2>
+                <!-- Botón para abrir el modal de nueva transacción. Solo visible en la pestaña Transacciones. -->
+                <button id="add-transaction-button" onclick="showTransactionModal()" class="px-4 py-2 bg-emerald-500 text-white rounded-lg shadow-md hover:bg-emerald-600 transition-colors duration-200 hidden">
+                    + Nueva Transacción
+                </button>
+            </header>
+
+            <!-- Contenedores de las Pestañas (Solo una visible a la vez) -->
+
+            <!-- Pestaña 1: Dashboard (Tablero Principal) - Contenido renderizado por JS (updateDashboardSummary) -->
+            <section id="content-dashboard" class="tab-content">
+                <!-- Contenido se actualiza dinámicamente -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">¡Bienvenido!</h3>
+                    <p class="text-gray-600">Este es el panel principal de tu aplicación contable. Aquí se mostrarán los resúmenes clave (saldos, ingresos/egresos) una vez que carguemos los datos de Transacciones.</p>
+                    <div id="loading-state" class="mt-4 p-3 bg-blue-100 text-blue-800 rounded-md">
+                        Inicializando Firebase y autenticación...
+                    </div>
+                    <div id="auth-ready" class="hidden mt-4 p-3 bg-green-100 text-green-800 rounded-md">
+                        Autenticación de Firebase lista. Ingresa tus credenciales en el modal.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pestaña 2: Transacciones (Listado) - Contenido renderizado por JS (renderTransactionsList) -->
+            <section id="content-transactions" class="tab-content hidden">
+                <!-- Contenido se actualiza dinámicamente -->
+            </section>
+
+            <!-- Pestaña 3: Reportes (Contenido nuevo: Gráficos y Resumen P&G) -->
+            <section id="content-reports" class="tab-content hidden">
+                 <!-- Este contenido será llenado por renderReports() -->
+            </section>
+        </main>
+    </div>
+
+    <!-- 3. Modal para Agregar/Editar Transacción (Formulario) -->
+    <div id="transaction-modal" class="hidden fixed inset-0 z-40 bg-gray-900 bg-opacity-50 flex items-center justify-center">
+        <!-- Contenedor del Modal -->
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transform transition-all duration-300">
+            <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-6">Nueva Transacción</h3>
+            <!-- Mensaje de error/éxito del formulario -->
+             <div id="transaction-message" class="hidden p-3 mb-4 text-sm rounded-lg text-red-700 bg-red-100 font-medium border border-red-200"></div>
+
+            <form id="transaction-form">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <div>
+                        <label for="transaction-type" class="block text-sm font-medium text-gray-700">Tipo</label>
+                        <select id="transaction-type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="Ingreso">Ingreso</option>
+                            <option value="Egreso">Egreso</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="transaction-amount" class="block text-sm font-medium text-gray-700">Monto ($)</label>
+                        <input type="number" id="transaction-amount" step="0.01" required placeholder="0.00" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="transaction-description" class="block text-sm font-medium text-gray-700">Descripción</label>
+                        <input type="text" id="transaction-description" required placeholder="Venta de servicio, Pago de renta, etc." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="transaction-date" class="block text-sm font-medium text-gray-700">Fecha</label>
+                        <input type="date" id="transaction-date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+
+                    <!-- Campo oculto para el ID en caso de edición -->
+                    <input type="hidden" id="transaction-id">
+                </div>
+                
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" onclick="hideTransactionModal()" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-md">
+                        Guardar Transacción
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
-    <div id="app-wrapper" class="hidden container mx-auto p-4 md:p-8 max-w-screen-2xl">
-        <header class="text-center mb-6">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Plataforma de Gestión Integral</h1>
-            <p class="text-gray-600 mt-2">Panel de control de alumnos, finanzas y proyecciones.</p>
-        </header>
-
-        <div class="mb-8 border-b border-gray-200">
-            <nav id="main-tabs" class="-mb-px flex justify-center flex-wrap space-x-6" aria-label="Tabs">
-                <button class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="dashboard-general">Dashboard</button>
-                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="alumnos">Alumnos</button>
-                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="egresos">Egresos</button>
-                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="nomina">Nómina</button>
-                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="gasolina">Gasolina</button>
-                <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500" data-tab="proyecciones">Proyecciones</button>
-            </nav>
+    <!-- 4. Modal de Confirmación (Reemplazo de window.confirm) -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h4 class="text-lg font-bold text-gray-800 mb-4" id="confirm-title">Confirmar Acción</h4>
+            <p class="text-gray-600 mb-6" id="confirm-message">¿Estás seguro de que deseas realizar esta acción?</p>
+            <div class="flex justify-end space-x-3">
+                <button id="confirm-cancel" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">Cancelar</button>
+                <button id="confirm-proceed" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md">Confirmar</button>
+            </div>
         </div>
-
-        <main>
-            <div id="dashboard-general-content" class="tab-content active">
-                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-lg"><p class="text-sm text-gray-500">Ingresos del Mes (Alumnos)</p><p id="db-total-income" class="text-2xl font-bold text-green-600">$0.00</p></div>
-                    <div class="bg-white p-6 rounded-2xl shadow-lg"><p class="text-sm text-gray-500">Egresos del Mes</p><p id="db-total-expenses" class="text-2xl font-bold text-red-600">$0.00</p></div>
-                    <div class="bg-white p-6 rounded-2xl shadow-lg"><p class="text-sm text-gray-500">Nómina Pagada del Mes</p><p id="db-total-payroll" class="text-2xl font-bold text-yellow-600">$0.00</p></div>
-                    <div class="bg-white p-6 rounded-2xl shadow-lg"><p class="text-sm text-gray-500">Balance Neto del Mes</p><p id="db-net-balance" class="text-2xl font-bold text-blue-600">$0.00</p></div>
-                </div>
-                <div class="bg-white p-6 rounded-2xl shadow-lg">
-                    <h2 class="text-2xl font-semibold mb-4 text-center">Resumen Anual de Flujo de Caja</h2>
-                    <canvas id="main-dashboard-chart"></canvas>
-                </div>
-            </div>
-
-            <div id="alumnos-content" class="tab-content">
-                <div id="dashboard-tab">
-                    <h2 class="text-2xl font-semibold mb-6 text-center">Resumen por Programa</h2>
-                    <div id="dashboard-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
-                    <div id="dashboard-loader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
-                    <div id="dashboard-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay datos para mostrar.</p></div>
-                    <h2 class="text-2xl font-semibold mb-6 mt-10 text-center">Resumen por Generación</h2>
-                    <div id="generation-dashboard-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
-                </div>
-                <div id="students-tab" class="mt-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
-                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                            <h2 class="text-xl font-semibold mb-4">Reporte Mensual de Pagos</h2>
-                            <button id="export-csv-btn" class="mb-4 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Exportar a CSV</button>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-4 mb-6">
-                            <div><label for="month-filter" class="text-sm font-medium">Mes:</label><select id="month-filter" class="rounded-lg border-gray-300"></select></div>
-                            <div><label for="year-filter" class="text-sm font-medium">Año:</label><select id="year-filter" class="rounded-lg border-gray-300"></select></div>
-                            <div><label for="program-filter" class="text-sm font-medium">Programa:</label><select id="program-filter" class="rounded-lg border-gray-300"><option value="Todos">Todos</option></select></div>
-                        </div>
-                        <div id="monthly-progress-container" class="flex flex-col md:flex-row items-center gap-8 p-4 bg-gray-50 rounded-lg">
-                            <div class="progress-circle" id="monthly-progress-circle"><span id="monthly-progress-text" class="progress-circle-inner text-gray-800">0%</span></div>
-                            <div class="flex-1 text-center md:text-left">
-                                <p class="text-gray-600">Progreso de Cobranza del Mes</p>
-                                <p class="text-2xl font-bold text-gray-900"><span id="monthly-collected"></span> / <span id="monthly-expected"></span></p>
-                            </div>
-                        </div>
-                        <div class="mt-6 overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Alumno</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Generación</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimiento</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="monthly-report-table-body" class="bg-white divide-y divide-gray-200"></tbody>
-                            </table>
-                            <div id="monthly-report-empty" class="text-center py-8 text-gray-500 hidden"><p>No hay pagos programados.</p></div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
-                        <div class="xl:col-span-2 space-y-8">
-                            <div class="bg-white p-6 rounded-2xl shadow-lg">
-                                <h2 class="text-xl font-semibold mb-4">Agregar Alumno</h2>
-                                <form id="add-student-form" class="space-y-4">
-                                    <div><label for="student-name" class="block text-sm">Nombre</label><input type="text" id="student-name" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                    <div><label for="student-generation" class="block text-sm">Generación</label><input type="number" id="student-generation" required min="1" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                    <div><label for="student-institution" class="block text-sm">Institución</label><select id="student-institution" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"><option value="UDC">UDC</option><option value="IESM">IESM</option></select></div>
-                                    <div><label for="student-program" class="block text-sm">Programa</label><select id="student-program" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></select></div>
-                                    <div><label for="student-start-date" class="block text-sm">Fecha de Inicio</label><input type="date" id="student-start-date" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                    <div id="monthly-payment-section" class="space-y-4">
-                                        <div><label for="regular-monthly-amount" class="block text-sm">Costo Mensual Regular ($)</label><input type="number" id="regular-monthly-amount" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                        <div><label for="scholarship-percentage" class="block text-sm">Beca (%)</label><input type="number" id="scholarship-percentage" min="0" max="100" value="0" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                        <div><label for="monthly-amount" class="block text-sm text-gray-500">Monto a Pagar</label><input type="text" id="monthly-amount" disabled class="mt-1 block w-full bg-gray-200 p-3 rounded-lg font-bold"></div>
-                                        <div><label for="installments-number" class="block text-sm"># Mensualidades</label><input type="number" id="installments-number" required min="1" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                    </div>
-                                    <div class="flex items-center"><input type="checkbox" id="paid-in-full-checkbox" class="h-4 w-4"><label for="paid-in-full-checkbox" class="ml-2 block text-sm">Pago de Contado</label></div>
-                                    <div id="paid-in-full-details" class="hidden space-y-4">
-                                        <div><label for="total-cost" class="block text-sm">Costo Total ($)</label><input type="number" id="total-cost" min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                        <div><label for="program-duration" class="block text-sm">Duración (meses)</label><input type="number" id="program-duration" min="1" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                    </div>
-                                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Agregar Alumno</button>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
-                            <h2 class="text-xl font-semibold mb-4">Lista General de Alumnos</h2>
-                            <div id="students-loader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
-                            <div id="students-list-container" class="overflow-x-auto hidden">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gen.</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Institución / Programa</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progreso</th>
-                                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="students-table-body" class="bg-white divide-y divide-gray-200"></tbody>
-                                </table>
-                                <div id="students-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay alumnos registrados.</p></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="egresos-content" class="tab-content">
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    <div class="lg:col-span-1 space-y-8">
-                        <div class="bg-white p-6 rounded-2xl shadow-lg">
-                            <h2 class="text-xl font-semibold mb-4">Registrar Egreso</h2>
-                            <form id="add-expense-form" class="space-y-4">
-                                <div><label for="expense-date" class="block text-sm">Fecha</label><input type="date" id="expense-date" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="expense-provider" class="block text-sm">Proveedor</label><input type="text" id="expense-provider" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="expense-reference" class="block text-sm">Referencia</label><input type="text" id="expense-reference" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="expense-detail" class="block text-sm">Detalle</label><textarea id="expense-detail" rows="3" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></textarea></div>
-                                <div><label for="expense-amount" class="block text-sm">Monto ($)</label><input type="number" id="expense-amount" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="expense-concept" class="block text-sm">Concepto</label><input type="text" id="expense-concept" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="expense-company" class="block text-sm">Empresa</label><select id="expense-company" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"><option value="IESM">IESM</option><option value="UDC">UDC</option><option value="ISA">ISA</option><option value="Externo">Externo</option></select></div>
-                                <div><label for="expense-classification" class="block text-sm">Clasificación</label><input type="text" id="expense-classification" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label class="block text-sm">Comprobante</label><input type="file" id="expense-file" class="hidden"><button type="button" id="expense-upload-btn" class="w-full mt-1 text-sm border py-2 rounded-md">Seleccionar Archivo</button><span id="expense-file-name" class="text-xs text-gray-500 block mt-1"></span></div>
-                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Registrar Egreso</button>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
-                        <h2 class="text-xl font-semibold mb-4">Historial de Egresos</h2>
-                        <div id="expense-list-container" class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor / Detalle</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th></tr></thead>
-                                <tbody id="expense-table-body" class="bg-white divide-y divide-gray-200"></tbody>
-                            </table>
-                        </div>
-                        <div id="expenses-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay egresos registrados.</p></div>
-                    </div>
-                </div>
-                <div class="mt-8 bg-white p-6 rounded-2xl shadow-lg">
-                    <h2 class="text-2xl font-semibold mb-4 text-center">Análisis de Egresos</h2>
-                    <div class="flex flex-wrap items-center gap-4 mb-6">
-                        <div><label for="expense-analysis-year-filter" class="text-sm">Año:</label><select id="expense-analysis-year-filter" class="rounded-lg"></select></div>
-                        <div><label for="expense-analysis-month-filter" class="text-sm">Mes:</label><select id="expense-analysis-month-filter" class="rounded-lg"></select></div>
-                        <div><label for="expense-company-filter" class="text-sm">Empresa:</label><select id="expense-company-filter" class="rounded-lg"></select></div>
-                        <div><label for="expense-concept-filter" class="text-sm">Concepto:</label><select id="expense-concept-filter" class="rounded-lg"></select></div>
-                        <div><label for="expense-classification-filter" class="text-sm">Clasificación:</label><select id="expense-classification-filter" class="rounded-lg"></select></div>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
-                        <div class="lg:col-span-1 text-center p-4 bg-red-50 rounded-lg"><p class="text-lg text-red-800">Total (Filtrado)</p><p id="expense-total-cost" class="text-3xl font-bold text-red-900 mt-1">$0.00</p></div>
-                        <div class="lg:col-span-2 bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg mb-4 text-center">Egresos por Concepto</h3><canvas id="expense-concept-chart"></canvas></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="nomina-content" class="tab-content">
-                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    <div class="lg:col-span-1 space-y-8">
-                        <div class="bg-white p-6 rounded-2xl shadow-lg">
-                            <h2 class="text-xl font-semibold mb-4">Agregar Empleado</h2>
-                            <form id="add-employee-form" class="space-y-4">
-                                <div><label for="employee-name" class="block text-sm">Nombre</label><input type="text" id="employee-name" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="employee-position" class="block text-sm">Puesto</label><input type="text" id="employee-position" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="employee-department" class="block text-sm">Departamento</label><input type="text" id="employee-department" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="employee-company" class="block text-sm">Empresa</label><select id="employee-company" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"><option value="IESM">IESM</option><option value="UDC">UDC</option><option value="ISA">ISA</option><option value="Externo">Externo</option></select></div>
-                                <div><label for="employee-salary" class="block text-sm">Salario Mensual ($)</label><input type="number" id="employee-salary" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Agregar Empleado</button>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
-                        <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
-                            <h2 class="text-xl font-semibold">Nómina de Empleados</h2>
-                            <div class="flex items-center gap-4 mt-4 sm:mt-0">
-                                <label for="payroll-view-year" class="text-sm">Año:</label><select id="payroll-view-year" class="rounded-lg"></select>
-                                <label for="payroll-view-month" class="text-sm">Mes:</label><select id="payroll-view-month" class="rounded-lg"></select>
-                            </div>
-                        </div>
-                        <div id="payroll-progress-container" class="mb-6">
-                            <div class="flex justify-between mb-1"><span class="text-base font-medium text-blue-700">Progreso de Nómina Mensual</span><span id="payroll-progress-text" class="text-sm font-medium text-blue-700">0%</span></div>
-                            <div class="w-full bg-gray-200 rounded-full h-4"><div id="payroll-progress-bar" class="bg-blue-600 h-4 rounded-full" style="width: 0%"></div></div>
-                            <p id="payroll-progress-summary" class="text-xs text-right mt-1 text-gray-600"></p>
-                        </div>
-                        <div id="employee-list-container" class="space-y-4"></div>
-                        <div id="payroll-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay empleados registrados.</p></div>
-                    </div>
-                </div>
-                <div class="mt-8 bg-white p-6 rounded-2xl shadow-lg">
-                    <h2 class="text-2xl font-semibold mb-4 text-center">Análisis de Nómina</h2>
-                    <div class="flex flex-wrap items-center gap-4 mb-6">
-                        <div><label for="payroll-analysis-year-filter" class="text-sm">Año:</label><select id="payroll-analysis-year-filter" class="rounded-lg"></select></div>
-                        <div><label for="payroll-analysis-month-filter" class="text-sm">Mes:</label><select id="payroll-analysis-month-filter" class="rounded-lg"></select></div>
-                        <div><label for="payroll-company-filter" class="text-sm">Empresa:</label><select id="payroll-company-filter" class="rounded-lg"></select></div>
-                        <div><label for="payroll-department-filter" class="text-sm">Departamento:</label><select id="payroll-department-filter" class="rounded-lg"></select></div>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
-                        <div class="lg:col-span-1 text-center p-4 bg-blue-50 rounded-lg"><p class="text-lg text-blue-800">Costo Total (Filtrado)</p><p id="payroll-total-cost" class="text-3xl font-bold text-blue-900 mt-1">$0.00</p></div>
-                        <div class="lg:col-span-2 bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg mb-4 text-center">Costo por Departamento</h3><canvas id="payroll-department-chart"></canvas></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="gasolina-content" class="tab-content">
-                <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
-                    <div class="xl:col-span-2 space-y-8">
-                        <div class="bg-white p-6 rounded-2xl shadow-lg">
-                            <h2 class="text-xl font-semibold mb-4">Registrar Gasto de Gasolina</h2>
-                            <form id="add-gas-form" class="space-y-4">
-                                <div><label for="gas-driver-select" class="block text-sm">Nombre</label><select id="gas-driver-select" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></select></div>
-                                <div id="gas-viaticos-details" class="hidden"><label for="gas-viaticos-name" class="block text-sm">Nombre para Viáticos</label><input type="text" id="gas-viaticos-name" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="gas-model-select" class="block text-sm">Auto</label><select id="gas-model-select" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></select></div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label for="gas-card" class="block text-sm"># Tarjeta</label><input type="text" id="gas-card" readonly class="mt-1 block w-full bg-gray-200 p-3 rounded-lg"></div>
-                                    <div><label for="gas-brand" class="block text-sm">Marca</label><input type="text" id="gas-brand" readonly class="mt-1 block w-full bg-gray-200 p-3 rounded-lg"></div>
-                                </div>
-                                <div><label for="gas-date" class="block text-sm">Fecha</label><input type="datetime-local" id="gas-date" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label for="gas-quantity" class="block text-sm">Cantidad (L)</label><input type="number" id="gas-quantity" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                    <div><label for="gas-price" class="block text-sm">Precio x Litro</label><input type="number" id="gas-price" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                </div>
-                                <div><label for="gas-subtotal" class="block text-sm">Subtotal ($)</label><input type="number" id="gas-subtotal" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label for="gas-iva" class="block text-sm text-gray-500">IVA (16%)</label><input type="text" id="gas-iva" readonly class="mt-1 block w-full bg-gray-200 p-3 rounded-lg font-bold"></div>
-                                <div><label for="gas-total" class="block text-sm">Total ($)</label><input type="number" id="gas-total" required min="0" step="0.01" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div>
-                                <div><label class="block text-sm">Factura</label><input type="file" id="gas-file" class="hidden"><button type="button" id="gas-upload-btn" class="w-full mt-1 text-sm border py-2 rounded-md">Seleccionar Archivo</button><span id="gas-file-name" class="text-xs text-gray-500 block mt-1"></span></div>
-                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Registrar Gasto</button>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="xl:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
-                        <h2 class="text-xl font-semibold mb-4">Historial de Gastos</h2>
-                        <div id="gas-list-container" class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehículo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Factura</th></tr></thead>
-                                <tbody id="gas-table-body" class="bg-white divide-y divide-gray-200"></tbody>
-                            </table>
-                            <div id="gas-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay gastos de gasolina.</p></div>
-                        </div>
-                    </div>
-                </div>
-                <div id="gas-analysis-content-to-export" class="mt-8 bg-white p-6 rounded-2xl shadow-lg">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold">Análisis de Gastos de Gasolina</h2>
-                        <button id="export-gas-pdf-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Exportar a PDF</button>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-4 mb-6">
-                        <div><label for="gas-analysis-year-filter" class="text-sm">Año:</label><select id="gas-analysis-year-filter" class="rounded-lg"></select></div>
-                        <div><label for="gas-analysis-month-filter" class="text-sm">Mes:</label><select id="gas-analysis-month-filter" class="rounded-lg"></select></div>
-                        <div><label for="gas-analysis-driver-filter" class="text-sm">Nombre:</label><select id="gas-analysis-driver-filter" class="rounded-lg"></select></div>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg text-center mb-4">Comparativa Mensual</h3><canvas id="gas-line-chart"></canvas></div>
-                        <div class="bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg text-center mb-4">Tabla Comparativa</h3><div id="gas-comparison-container" class="overflow-x-auto"></div></div>
-                    </div>
-                    <div id="gas-charts-container" class="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"></div>
-                    <div id="gas-charts-empty" class="text-center py-16 text-gray-500 hidden"><p>No hay datos para mostrar.</p></div>
-                </div>
-            </div>
-            
-            <div id="proyecciones-content" class="tab-content">
-                 <div class="bg-white p-6 rounded-2xl shadow-lg">
-                    <h2 class="text-2xl font-semibold mb-2 text-center">Análisis de Proyecciones</h2>
-                    <div id="projections-loader" class="flex justify-center items-center h-64"><div class="loader"></div></div>
-                    <div id="projections-content" class="hidden">
-                        <h3 class="text-xl font-semibold mb-6 text-center text-gray-700">Resumen Financiero Global</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            <div class="bg-blue-50 p-6 rounded-2xl"><h3 class="text-lg text-blue-800">Proyección Total</h3><p id="total-projected" class="text-3xl font-bold text-blue-900 mt-2">$0.00</p></div>
-                            <div class="bg-green-50 p-6 rounded-2xl"><h3 class="text-lg text-green-800">Total Recaudado</h3><p id="total-collected" class="text-3xl font-bold text-green-900 mt-2">$0.00</p></div>
-                            <div class="bg-yellow-50 p-6 rounded-2xl"><h3 class="text-lg text-yellow-800">Balance Pendiente</h3><p id="total-pending-balance" class="text-3xl font-bold text-yellow-900 mt-2">$0.00</p></div>
-                            <div class="bg-indigo-50 p-6 rounded-2xl"><h3 class="text-lg text-indigo-800">Ingreso Mensual Esperado</h3><p id="expected-monthly-income" class="text-3xl font-bold text-indigo-900 mt-2">$0.00</p></div>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-6 text-center mt-12 text-gray-700">Análisis Gráfico</h3>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <div class="bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg text-center mb-4">Ingresos Mensuales (Año Actual)</h3><canvas id="monthlyComparisonChart"></canvas></div>
-                            <div class="bg-gray-50 p-6 rounded-2xl"><h3 class="text-lg text-center mb-4">Ingresos Anuales</h3><canvas id="yearlyComparisonChart"></canvas></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
     </div>
 
-    <div id="auth-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
-    <div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
-    <div id="payments-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
-    <div id="invoice-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
-    <div id="payroll-payment-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
-    <div id="payroll-history-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 flex items-center justify-center p-4"></div>
 
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
+    <!-- Lógica de Firebase y de la Aplicación -->
+    <script type="module">
+        // Importaciones de Firebase (necesarias para la persistencia de datos)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Se añaden addDoc, collection y deleteDoc para la gestión de transacciones
+        import { getFirestore, setDoc, doc, collection, onSnapshot, query, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // #############################################################################
-    // BLOQUE 1: ESQUELETO, VARIABLES Y FUNCIONES BÁSICAS
-    // #############################################################################
+        // Establecer nivel de log para depuración de Firestore
+        setLogLevel('debug');
 
-    // --- VARIABLES GLOBALES PARA ALMACENAR DATOS ---
-    let allStudentsCache = [];
-    let allGasRecordsCache = [];
-    let allExpensesCache = [];
-    let allEmployeesCache = [];
+        // Variables Globales OBLIGATORIAS proporcionadas por el entorno de Canvas
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    // --- VARIABLES PARA LOS GRÁFICOS ---
-    let gasChartInstances = {};
-    let monthlyReportCache = [];
-    let mainDashboardChartInstance = null;
-    let monthlyComparisonChartInstance, yearlyComparisonChartInstance;
-    let expenseConceptChartInstance = null;
-    let payrollDepartmentChartInstance = null;
-    let gasLineChartInstance = null;
+        let app, db, auth, userId = null;
+        let transactions = []; // Almacenará los datos de las transacciones
+        let monthlyChart = null; // Variable para almacenar la instancia del gráfico
 
-    // --- DATOS CONSTANTES DE LA APLICACIÓN ---
-    const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    const drivers = [ { name: 'Seleccione un nombre...', card: '' , isViaticos: false}, { name: "Lic. Armando", card: "1382", isViaticos: false }, { name: "Escolta Gaby (Israel)", card: "", isViaticos: false }, { name: "Escolta Dr Conde (Mauricio)", card: "1408", isViaticos: false }, { name: "Escolta Tere (Alba)", card: "8712", isViaticos: false }, { name: "Gerardo Lozano", card: "1424", isViaticos: false }, { name: "Antonio Lozano", card: "1432", isViaticos: false }, { name: "Dr Olivares (Luis)", card: "1457", isViaticos: false }, { name: "Gaby (Richard)", card: "1390", isViaticos: false }, { name: "Armando", card: "", isViaticos: false }, { name: "Don Boni", card: "8217", isViaticos: false }, { name: "Viáticos", card: "0362", isViaticos: true }, ];
-    const cars = [ { model: 'Seleccione un auto...', brand: '' }, { model: "THUNDERBIRD", brand: "FORD" }, { model: "NAVIGATOR", brand: "LINCOLN" }, { model: "GLE COUPÉ", brand: "MERCEDES BENZ" }, { model: "MUSTANG ROJO", brand: "FORD" }, { model: "SUBURBAN HIGH COUNTRY G", brand: "CHEVROLET" }, { model: "SIENNA", brand: "TOYOTA" }, { model: "HIGHLANDER", brand: "TOYOTA" }, { model: "SENTRA", brand: "NISSAN" }, { model: "SUBURBAN GRIS", brand: "CHEVROLET" }, { model: "RAV4 BLANCA", brand: "TOYOTA" }, { model: "RAV4 AZUL", brand: "TOYOTA" }, { model: "DURANGO", brand: "DODGE" }, { model: "ALTIMA", brand: "NISSAN" }, { model: "MOTOS DE ACUÁTICAS", brand: "-" }, { model: "PODADORA", brand: "-" }, ];
-    const programsByInstitution = { UDC: { 'Médicas': [ 'Maestría en Medicina Estética y Longevidad' ], 'No Médicas': [ 'Técnico Superior Universitario', 'Licenciatura en Derecho', 'Licenciatura en Pedagogía', 'Licenciatura en Contaduría Pública', 'Licenciatura en Administración de Empresas', 'Maestría en Criminología', 'Maestría en Educación', 'Maestría en Derecho Procesal Penal', 'Maestría en Administración y Dirección de Empresas', 'Doctorado en Administración Pública', 'Doctorado en Educación' ] }, IESM: { 'Médicas': [ 'Maestría en Cirugía Estética' ], 'No Médicas': [] } };
+        // --- LÓGICA DE AUTENTICACIÓN DEMO ---
+        const DEMO_USER = "Dulce";
+        const DEMO_PASS = "1234";
 
-    // --- FUNCIONES DE UTILIDAD (COMPARTIDAS) ---
-    function formatCurrency(value) {
-        if (typeof value !== 'number') { value = parseFloat(value) || 0; }
-        return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-    }
+        // Función para mostrar la interfaz principal de la aplicación
+        const showAppUI = () => {
+            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            console.log("Inicio de sesión exitoso. Aplicación principal visible.");
+        };
 
-    function fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
+        // Función para manejar el inicio de sesión simulado
+        window.handleLogin = () => {
+            const usernameInput = document.getElementById('login-username').value;
+            const passwordInput = document.getElementById('login-password').value;
+            const messageDisplay = document.getElementById('login-message');
 
-    // --- LÓGICA DE DATOS Y NAVEGACIÓN ---
-    function loadAllDataFromLocalStorage() {
-        const studentsData = localStorage.getItem('studentsDB');
-        allStudentsCache = studentsData ? JSON.parse(studentsData) : [];
-        const gasData = localStorage.getItem('gasDB');
-        allGasRecordsCache = gasData ? JSON.parse(gasData) : [];
-        const expenseData = localStorage.getItem('expensesDB');
-        allExpensesCache = expenseData ? JSON.parse(expenseData) : [];
-        const employeeData = localStorage.getItem('employeesDB');
-        allEmployeesCache = employeeData ? JSON.parse(employeeData) : [];
-    }
+            messageDisplay.classList.add('hidden');
+            messageDisplay.textContent = '';
 
-    function saveAllDataToLocalStorage() {
-        localStorage.setItem('studentsDB', JSON.stringify(allStudentsCache));
-        localStorage.setItem('gasDB', JSON.stringify(allGasRecordsCache));
-        localStorage.setItem('expensesDB', JSON.stringify(allExpensesCache));
-        localStorage.setItem('employeesDB', JSON.stringify(allEmployeesCache));
-    }
-
-    function setupNavigation() {
-        const mainTabsContainer = document.getElementById('main-tabs');
-        const mainTabContents = document.querySelectorAll('#app-wrapper > main > .tab-content');
-        
-        mainTabsContainer.addEventListener('click', (e) => {
-            const button = e.target.closest('button');
-            if (!button) return;
-
-            const tab = button.dataset.tab;
-            mainTabsContainer.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active', 'text-blue-600');
-                btn.classList.add('text-gray-500');
-            });
-            button.classList.add('active', 'text-blue-600');
-            button.classList.remove('text-gray-500');
-
-            mainTabContents.forEach(content => {
-                content.classList.toggle('active', content.id === `${tab}-content`);
-            });
-        });
-    }
-
-    // #############################################################################
-// BLOQUE 2: FUNCIONES DE RENDERIZADO (DIBUJAR EN PANTALLA)
-// #############################################################################
-
-function renderAllModules() {
-    setupAllFilters();
-    renderMainDashboard();
-    renderAlumnosTab();
-    renderEgresosTab();
-    renderNominaTab();
-    renderGasolinaTab();
-    renderProyeccionesTab();
-}
-
-// --- 2.1 RENDERIZADO DEL DASHBOARD PRINCIPAL ---
-function renderMainDashboard() {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-
-    const incomeMonth = allStudentsCache.flatMap(s => s.installmentsList || []).filter(p => p.status === 'paid' && p.paymentDate && new Date(p.paymentDate).getFullYear() === currentYear && new Date(p.paymentDate).getMonth() === currentMonth).reduce((sum, p) => sum + p.amount, 0);
-    const expensesMonth = allExpensesCache.filter(e => { const d = new Date(e.date + 'T00:00:00'); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; }).reduce((sum, e) => sum + e.amount, 0);
-    const payrollMonth = allEmployeesCache.flatMap(emp => emp.payments).filter(p => { const d = new Date(p.date); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; }).reduce((sum, p) => sum + p.amount, 0);
-    
-    document.getElementById('db-total-income').textContent = formatCurrency(incomeMonth);
-    document.getElementById('db-total-expenses').textContent = formatCurrency(expensesMonth);
-    document.getElementById('db-total-payroll').textContent = formatCurrency(payrollMonth);
-    document.getElementById('db-net-balance').textContent = formatCurrency(incomeMonth - expensesMonth - payrollMonth);
-    
-    const incomeByMonth = Array(12).fill(0);
-    allStudentsCache.flatMap(s => s.installmentsList || []).filter(p => p.status === 'paid' && p.paymentDate && new Date(p.paymentDate).getFullYear() === currentYear).forEach(p => { incomeByMonth[new Date(p.paymentDate).getMonth()] += p.amount; });
-    const expensesByMonth = Array(12).fill(0);
-    allExpensesCache.filter(e => new Date(e.date + 'T00:00:00').getFullYear() === currentYear).forEach(e => { expensesByMonth[new Date(e.date + 'T00:00:00').getMonth()] += e.amount; });
-    const payrollByMonth = Array(12).fill(0);
-    allEmployeesCache.flatMap(emp => emp.payments).filter(p => new Date(p.date).getFullYear() === currentYear).forEach(p => { payrollByMonth[new Date(p.date).getMonth()] += p.amount; });
-
-    const ctx = document.getElementById('main-dashboard-chart').getContext('2d');
-    if (mainDashboardChartInstance) mainDashboardChartInstance.destroy();
-    mainDashboardChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: MONTH_NAMES,
-            datasets: [
-                { label: 'Ingresos (Alumnos)', data: incomeByMonth, backgroundColor: 'rgba(22, 163, 74, 0.7)' },
-                { label: 'Egresos', data: expensesByMonth, backgroundColor: 'rgba(220, 38, 38, 0.7)' },
-                { label: 'Nómina', data: payrollByMonth, backgroundColor: 'rgba(245, 158, 11, 0.7)' }
-            ]
-        },
-        options: { scales: { x: { stacked: false }, y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: context => formatCurrency(context.parsed.y) } } } }
-    });
-}
-
-// --- 2.2 RENDERIZADO DEL MÓDULO ALUMNOS ---
-function renderAlumnosTab() {
-    renderAcademicDashboard();
-    renderStudentsList();
-    renderMonthlyReport();
-}
-
-function renderAcademicDashboard() {
-    const dashboardContent = document.getElementById('dashboard-content');
-    const generationContent = document.getElementById('generation-dashboard-content');
-    const emptyEl = document.getElementById('dashboard-empty');
-    if (allStudentsCache.length === 0) {
-        dashboardContent.innerHTML = '';
-        generationContent.innerHTML = '';
-        emptyEl.classList.remove('hidden');
-        return;
-    }
-    emptyEl.classList.add('hidden');
-    document.getElementById('dashboard-loader').classList.add('hidden');
-
-    const programSummary = allStudentsCache.reduce((acc, student) => {
-        const program = student.program || 'Sin Programa';
-        if (!acc[program]) { acc[program] = { totalContracted: 0, totalPaid: 0, activeContracted: 0, inactiveContracted: 0 }; }
-        const studentTotal = parseFloat(student.totalCost || 0);
-        const studentPaid = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-        acc[program].totalContracted += studentTotal;
-        acc[program].totalPaid += studentPaid;
-        if(student.status === 'active'){ acc[program].activeContracted += studentTotal; } 
-        else { acc[program].inactiveContracted += studentTotal; }
-        return acc;
-    }, {});
-
-    dashboardContent.innerHTML = Object.entries(programSummary).map(([program, data]) => {
-        const activePending = data.activeContracted - data.totalPaid;
-        return `<div class="bg-white p-6 rounded-2xl shadow-lg"><h3 class="text-lg font-bold text-gray-800 truncate">${program}</h3><div class="mt-4 space-y-2"><div class="flex justify-between text-sm"><span class="text-gray-500">Contratado (Activos):</span> <span class="font-medium">${formatCurrency(data.activeContracted)}</span></div><div class="flex justify-between text-sm"><span class="text-gray-500">Contratado (Bajas):</span> <span class="font-medium text-gray-400">${formatCurrency(data.inactiveContracted)}</span></div><div class="flex justify-between text-sm"><span class="text-green-600">Total Pagado:</span> <span class="font-medium text-green-600">${formatCurrency(data.totalPaid)}</span></div><div class="flex justify-between text-sm font-bold"><span class="text-yellow-600">Balance Pendiente (Activos):</span> <span class="text-yellow-600">${formatCurrency(activePending > 0 ? activePending : 0)}</span></div></div></div>`;
-    }).join('');
-    
-    const generationSummary = allStudentsCache.reduce((acc, student) => {
-        const generation = student.generation || 'Sin Generación';
-        if (!acc[generation]) acc[generation] = {};
-        const program = student.program || 'Sin Programa';
-        if(!acc[generation][program]) acc[generation][program] = { totalContracted: 0, totalPaid: 0 };
-        acc[generation][program].totalContracted += parseFloat(student.totalCost || 0);
-        const paid = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-        acc[generation][program].totalPaid += paid;
-        return acc;
-    }, {});
-
-    generationContent.innerHTML = Object.entries(generationSummary).map(([generation, programs]) => {
-        let programHTML = Object.entries(programs).map(([program, data]) => {
-            const pending = data.totalContracted - data.totalPaid;
-            return `<div class="mt-2 pt-2 border-t"><h4 class="font-semibold text-gray-700">${program}</h4><div class="flex justify-between text-xs mt-1"><span class="text-gray-500">Contratado:</span> <span class="font-medium">${formatCurrency(data.totalContracted)}</span></div><div class="flex justify-between text-xs"><span class="text-green-600">Pagado:</span> <span class="font-medium text-green-600">${formatCurrency(data.totalPaid)}</span></div><div class="flex justify-between text-xs"><span class="text-yellow-600">Pendiente:</span> <span class="font-medium text-yellow-600">${formatCurrency(pending)}</span></div></div>`;
-        }).join('');
-        return `<div class="bg-white p-6 rounded-2xl shadow-lg"><h3 class="text-xl font-bold text-gray-800 truncate">Generación: ${generation}</h3>${programHTML}</div>`;
-    }).join('');
-}
-
-function renderStudentsList() {
-    const tableBody = document.getElementById('students-table-body');
-    const container = document.getElementById('students-list-container');
-    const emptyEl = document.getElementById('students-empty');
-    container.classList.remove('hidden');
-    document.getElementById('students-loader').classList.add('hidden');
-    
-    if (allStudentsCache.length === 0) {
-        tableBody.innerHTML = '';
-        emptyEl.classList.remove('hidden');
-        return;
-    }
-    emptyEl.classList.add('hidden');
-
-    tableBody.innerHTML = allStudentsCache.map(student => {
-        const totalPaid = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
-        const totalCost = parseFloat(student.totalCost || 0);
-        const percentage = totalCost > 0 ? (totalPaid / totalCost) * 100 : 0;
-        const isActive = student.status === 'active';
-        const endDate = student.programEndDate ? new Date(student.programEndDate).toLocaleDateString() : 'N/A';
-        const hasScholarship = (student.scholarship || 0) > 0;
-
-        return `
-            <tr class="hover:bg-gray-50 ${!isActive ? 'student-inactive' : ''}">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${student.name} ${hasScholarship ? `<span class="text-xs font-bold text-blue-600 bg-blue-100 py-0.5 px-2 rounded-full">BECADO</span>` : ''}</div>
-                    <div class="text-xs text-gray-500 mt-1">Fin: ${endDate}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-500">${student.generation}</div></td>
-                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-500">${student.institution} - ${student.program}</div></td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${formatCurrency(totalPaid)} / ${formatCurrency(totalCost)}</div>
-                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div class="bg-blue-600 h-1.5 rounded-full" style="width: ${percentage}%"></div></div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                    <button class="manage-payments-btn text-blue-600 hover:text-blue-900" data-id="${student.id}">Pagos</button>
-                    <button class="toggle-status-btn text-xs font-semibold py-1 px-2 rounded-md ${isActive ? 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200' : 'text-green-700 bg-green-100 hover:bg-green-200'}" data-id="${student.id}">${isActive ? 'Dar de Baja' : 'Reactivar'}</button>
-                    <button class="delete-btn text-red-600 hover:text-red-900" data-id="${student.id}">Eliminar</button>
-                </td>
-            </tr>`;
-    }).join('');
-}
-
-function renderMonthlyReport() {
-    const reportTableBody = document.getElementById('monthly-report-table-body');
-    const monthFilter = document.getElementById('month-filter');
-    const yearFilter = document.getElementById('year-filter');
-    const programFilter = document.getElementById('program-filter');
-    reportTableBody.innerHTML = '';
-    
-    const selectedMonth = parseInt(monthFilter.value, 10);
-    const selectedYear = parseInt(yearFilter.value, 10);
-    const selectedProgram = programFilter.value;
-
-    const monthlyProgressContainer = document.getElementById('monthly-progress-container');
-    monthlyProgressContainer.classList.remove('hidden');
-
-    let monthlyExpected = 0;
-    let monthlyCollected = 0;
-    let reportData = [];
-
-    allStudentsCache
-    .filter(student => (selectedProgram === 'Todos' || student.program === selectedProgram) && student.status === 'active' && student.createdAt)
-    .forEach(student => {
-        const startDate = new Date(student.createdAt);
-        (student.installmentsList || []).forEach((installment, index) => {
-            const dueDate = new Date(startDate);
-            dueDate.setUTCMonth(startDate.getUTCMonth() + index);
-            if (dueDate.getFullYear() === selectedYear && dueDate.getUTCMonth() === selectedMonth) {
-                monthlyExpected += installment.amount;
-                let displayStatus = installment.status;
-                if (installment.status === 'pending' && new Date() > dueDate) { displayStatus = 'overdue'; }
-                reportData.push({ name: student.name, generation: student.generation, amount: installment.amount, dueDate: dueDate.toLocaleDateString(), status: displayStatus });
-                if (installment.status === 'paid') { monthlyCollected += installment.amount; }
+            if (usernameInput === DEMO_USER && passwordInput === DEMO_PASS) {
+                // Login exitoso
+                showAppUI();
+            } else {
+                // Login fallido
+                messageDisplay.textContent = "Credenciales incorrectas. Intenta con 'Dulce' / '1234'.";
+                messageDisplay.classList.remove('hidden');
+                console.warn("Intento de login fallido.");
             }
-        });
-    });
-    
-    monthlyReportCache = reportData;
-    const percentage = monthlyExpected > 0 ? (monthlyCollected / monthlyExpected) * 100 : 0;
-    
-    document.getElementById('monthly-progress-circle').style.setProperty('--p', `${percentage}%`);
-    document.getElementById('monthly-progress-text').textContent = `${Math.round(percentage)}%`;
-    document.getElementById('monthly-collected').textContent = formatCurrency(monthlyCollected);
-    document.getElementById('monthly-expected').textContent = formatCurrency(monthlyExpected);
+        };
 
-    const emptyReportEl = document.getElementById('monthly-report-empty');
-    if (reportData.length === 0) { 
-        reportTableBody.innerHTML = '';
-        emptyReportEl.classList.remove('hidden');
-        return;
-    }
-    
-    emptyReportEl.classList.add('hidden');
-    reportTableBody.innerHTML = reportData.map(item => {
-        let statusClass = 'bg-yellow-100 text-yellow-800';
-        let statusText = 'Pendiente';
-        if (item.status === 'paid') { statusClass = 'bg-green-100 text-green-800'; statusText = 'Pagado'; } 
-        else if (item.status === 'overdue') { statusClass = 'status-overdue animate-pulse'; statusText = 'ADEUDO'; }
-        return `<tr><td class="px-6 py-4">${item.name}</td><td class="px-6 py-4">${item.generation}</td><td class="px-6 py-4">${formatCurrency(item.amount)}</td><td class="px-6 py-4">${item.dueDate}</td><td class="px-6 py-4"><span class="px-2 inline-flex text-xs font-semibold rounded-full ${statusClass}">${statusText}</span></td></tr>`;
-    }).join('');
-}
+        // --- LÓGICA DE FIREBASE Y TRANSACCIONES ---
 
-// --- 2.3 RENDERIZADO DEL MÓDULO EGRESOS ---
-function renderEgresosTab() {
-    renderExpenseList();
-    renderExpenseAnalysis();
-}
+        /**
+         * Ruta de la colección de transacciones para el usuario actual.
+         * Colección privada: /artifacts/{appId}/users/{userId}/transactions
+         */
+        const getTransactionsCollectionRef = () => {
+            if (!db || !userId) {
+                console.error("Firestore o userId no están disponibles.");
+                return null;
+            }
+            return collection(db, 'artifacts', appId, 'users', userId, 'transactions');
+        };
 
-function renderExpenseList() {
-    const tableBody = document.getElementById('expense-table-body');
-    const expensesEmpty = document.getElementById('expenses-empty');
-    if (allExpensesCache.length === 0) { expensesEmpty.classList.remove('hidden'); tableBody.innerHTML = ''; return; }
-    expensesEmpty.classList.add('hidden');
-    const sortedExpenses = [...allExpensesCache].sort((a, b) => new Date(b.date) - new Date(a.date));
-    tableBody.innerHTML = sortedExpenses.map(expense => ` <tr class="hover:bg-gray-50"> <td class="px-6 py-4"><div class="text-sm font-medium">${expense.provider}</div><div class="text-xs text-gray-500">${expense.detail || ''}</div></td> <td class="px-6 py-4 text-sm">${new Date(expense.date + 'T00:00:00').toLocaleDateString()}</td> <td class="px-6 py-4 text-sm">${expense.concept}</td> <td class="px-6 py-4 text-sm font-bold text-right text-red-600">${formatCurrency(expense.amount)}</td> <td class="px-6 py-4 text-center text-sm space-x-2"> ${expense.receiptData ? `<button onclick="viewExpenseReceipt('${expense.id}')" class="text-blue-600 hover:underline">Ver</button>` : ''} <button class="delete-expense-btn text-red-600 hover:text-red-900" data-id="${expense.id}">Eliminar</button> </td> </tr>`).join('');
-}
+        // Escucha en tiempo real los cambios en las transacciones del usuario
+        const setupTransactionsListener = () => {
+            const transactionsRef = getTransactionsCollectionRef();
+            if (!transactionsRef) return;
 
-function renderExpenseAnalysis() {
-    const selectedYear = document.getElementById('expense-analysis-year-filter').value;
-    const selectedMonth = document.getElementById('expense-analysis-month-filter').value;
-    const selectedCompany = document.getElementById('expense-company-filter').value;
-    const selectedConcept = document.getElementById('expense-concept-filter').value;
-    const selectedClassification = document.getElementById('expense-classification-filter').value;
-    let filtered = allExpensesCache;
-    if (selectedYear !== 'Todos') filtered = filtered.filter(e => new Date(e.date + 'T00:00:00').getFullYear() === parseInt(selectedYear));
-    if (selectedMonth !== 'Todos') filtered = filtered.filter(e => new Date(e.date + 'T00:00:00').getMonth() === parseInt(selectedMonth));
-    if (selectedCompany !== 'Todos') filtered = filtered.filter(e => e.company === selectedCompany);
-    if (selectedConcept !== 'Todos') filtered = filtered.filter(e => e.concept === selectedConcept);
-    if (selectedClassification !== 'Todos') filtered = filtered.filter(e => e.classification === selectedClassification);
-    document.getElementById('expense-total-cost').textContent = formatCurrency(filtered.reduce((sum, e) => sum + e.amount, 0));
-    const conceptData = filtered.reduce((acc, exp) => { acc[exp.concept] = (acc[exp.concept] || 0) + exp.amount; return acc; }, {});
-    const ctx = document.getElementById('expense-concept-chart').getContext('2d');
-    if (expenseConceptChartInstance) expenseConceptChartInstance.destroy();
-    expenseConceptChartInstance = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(conceptData), datasets: [{ label: 'Gasto por Concepto', data: Object.values(conceptData), backgroundColor: 'rgba(239, 68, 68, 0.6)' }] }, options: { scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: c => formatCurrency(c.parsed.y) } } } } });
-}
+            // La consulta simple es suficiente (sin orderBy para evitar errores de índice)
+            const q = query(transactionsRef);
 
-// --- 2.4 RENDERIZADO DEL MÓDULO NÓMINA ---
-function renderNominaTab() {
-    renderPayrollList();
-    renderPayrollAnalysisCharts();
-}
+            onSnapshot(q, (snapshot) => {
+                transactions = [];
+                snapshot.forEach((doc) => {
+                    transactions.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Procesamiento y renderizado de transacciones
+                console.log("Transacciones cargadas en tiempo real:", transactions);
+                renderTransactionsList();
+                updateDashboardSummary();
+                if (!document.getElementById('content-reports').classList.contains('hidden')) {
+                    // Solo si la pestaña de reportes está activa, la actualizamos
+                    renderReports();
+                }
 
-function renderPayrollList() {
-    const payrollViewYear = document.getElementById('payroll-view-year');
-    const payrollViewMonth = document.getElementById('payroll-view-month');
-    const employeeListContainer = document.getElementById('employee-list-container');
-    const payrollEmpty = document.getElementById('payroll-empty');
-    const selectedYear = parseInt(payrollViewYear.value);
-    const selectedMonth = parseInt(payrollViewMonth.value);
-    const activeEmployeesInPeriod = allEmployeesCache.filter(employee => { const joinedDate = new Date(employee.createdAt); if(employee.status === 'inactive' && (!employee.inactiveDate || new Date(employee.inactiveDate) < new Date(selectedYear, selectedMonth, 1))) { return false; } return joinedDate <= new Date(selectedYear, selectedMonth + 1, 0); });
-    const groupedByDepartment = activeEmployeesInPeriod.reduce((acc, emp) => { const dept = emp.department || 'Sin Departamento'; if (!acc[dept]) acc[dept] = []; acc[dept].push(emp); return acc; }, {});
-    if (Object.keys(groupedByDepartment).length === 0) { payrollEmpty.classList.remove('hidden'); employeeListContainer.innerHTML = ''; } 
-    else { payrollEmpty.classList.add('hidden'); employeeListContainer.innerHTML = Object.keys(groupedByDepartment).sort().map(department => { const employeesHTML = groupedByDepartment[department].map(employee => { const paymentsThisPeriod = employee.payments.filter(p => { const d = new Date(p.date); return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear; }); const paidFirstHalf = paymentsThisPeriod.filter(p => p.quincena === 1).reduce((sum, p) => sum + p.amount, 0); const paidSecondHalf = paymentsThisPeriod.filter(p => p.quincena === 2).reduce((sum, p) => sum + p.amount, 0); const halfSalary = employee.salary / 2; const p1 = halfSalary > 0 ? (paidFirstHalf / halfSalary) * 100 : 0; const p2 = halfSalary > 0 ? (paidSecondHalf / halfSalary) * 100 : 0; return `<div class="bg-gray-50 p-4 rounded-lg shadow-sm ${employee.status === 'inactive' ? 'employee-inactive' : ''}"><div class="flex flex-col sm:flex-row justify-between sm:items-center"><div><p class="font-bold text-lg">${employee.name}</p><p class="text-sm text-gray-600">${employee.position} (${employee.company})</p><p class="text-sm font-medium">${formatCurrency(employee.salary)} / mes</p></div><div class="flex items-center gap-2 mt-2 sm:mt-0 flex-wrap"><button class="pay-btn text-sm bg-green-500 text-white py-1 px-3 rounded-lg" data-id="${employee.id}">Pagar</button><button class="history-btn text-sm bg-blue-500 text-white py-1 px-3 rounded-lg" data-id="${employee.id}">Historial</button><button class="toggle-status-employee-btn text-sm ${employee.status === 'active' ? 'bg-yellow-600' : 'bg-green-600'} text-white py-1 px-3 rounded-lg" data-id="${employee.id}">${employee.status === 'active' ? 'Baja' : 'Reactivar'}</button><button class="delete-employee-btn text-sm bg-red-600 text-white py-1 px-3 rounded-lg" data-id="${employee.id}">Eliminar</button></div></div><div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4"><div><p class="text-xs font-semibold text-gray-500">1ra Quincena:</p><div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-green-600 h-2.5 rounded-full" style="width: ${p1 > 100 ? 100 : p1}%"></div></div><p class="text-xs text-right mt-1">${formatCurrency(paidFirstHalf)} de ${formatCurrency(halfSalary)}</p></div><div><p class="text-xs font-semibold text-gray-500">2da Quincena:</p><div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-green-600 h-2.5 rounded-full" style="width: ${p2 > 100 ? 100 : p2}%"></div></div><p class="text-xs text-right mt-1">${formatCurrency(paidSecondHalf)} de ${formatCurrency(halfSalary)}</p></div></div></div>`; }).join(''); return `<div class="mb-6"><h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">${department}</h3><div class="space-y-4">${employeesHTML}</div></div>`; }).join(''); }
-    updatePayrollProgress();
-}
+            }, (error) => {
+                console.error("Error al escuchar transacciones:", error);
+            });
+        };
 
-function updatePayrollProgress() {
-    const payrollViewYear = document.getElementById('payroll-view-year');
-    const payrollViewMonth = document.getElementById('payroll-view-month');
-    const selectedYear = parseInt(payrollViewYear.value);
-    const selectedMonth = parseInt(payrollViewMonth.value);
-    const activeEmployeesInPeriod = allEmployeesCache.filter(e => { const joined = new Date(e.createdAt); if(e.status === 'inactive' && (!e.inactiveDate || new Date(e.inactiveDate) < new Date(selectedYear, selectedMonth, 1))) { return false; } return joined <= new Date(selectedYear, selectedMonth + 1, 0); });
-    const totalSalary = activeEmployeesInPeriod.reduce((sum, e) => sum + e.salary, 0);
-    const totalPaid = activeEmployeesInPeriod.reduce((sum, e) => { const payments = e.payments.filter(p => { const d = new Date(p.date); return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear; }); return sum + payments.reduce((s, p) => s + p.amount, 0); }, 0);
-    const percentage = totalSalary > 0 ? (totalPaid / totalSalary) * 100 : 0;
-    document.getElementById('payroll-progress-bar').style.width = `${percentage > 100 ? 100 : percentage}%`;
-    document.getElementById('payroll-progress-text').textContent = `${Math.round(percentage)}%`;
-    document.getElementById('payroll-progress-summary').textContent = `${formatCurrency(totalPaid)} / ${formatCurrency(totalSalary)}`;
-}
+        // Muestra un mensaje temporal en el modal de transacción
+        const showTransactionMessage = (message, isError = true) => {
+            const msgElement = document.getElementById('transaction-message');
+            msgElement.textContent = message;
+            msgElement.classList.remove('hidden');
+            
+            // Cambia el color si es un error o éxito
+            if (isError) {
+                msgElement.classList.remove('bg-green-100', 'text-green-700');
+                msgElement.classList.add('bg-red-100', 'text-red-700');
+            } else {
+                msgElement.classList.remove('bg-red-100', 'text-red-700');
+                msgElement.classList.add('bg-green-100', 'text-green-700');
+            }
 
-function renderPayrollAnalysisCharts() {
-    const year = document.getElementById('payroll-analysis-year-filter').value;
-    const month = document.getElementById('payroll-analysis-month-filter').value;
-    const company = document.getElementById('payroll-company-filter').value;
-    const department = document.getElementById('payroll-department-filter').value;
-    let filtered = allEmployeesCache;
-    if (company !== 'Todos') filtered = filtered.filter(e => e.company === company);
-    if (department !== 'Todos') filtered = filtered.filter(e => e.department === department);
-    const totalCost = filtered.flatMap(emp => emp.payments).filter(p => { const d = new Date(p.date); return (year === 'Todos' || d.getFullYear() === parseInt(year)) && (month === 'Todos' || d.getMonth() === parseInt(month)); }).reduce((sum, p) => sum + p.amount, 0);
-    document.getElementById('payroll-total-cost').textContent = formatCurrency(totalCost);
-    const departmentData = filtered.reduce((acc, emp) => { acc[emp.department] = (acc[emp.department] || 0) + emp.payments.filter(p => { const d = new Date(p.date); return (year === 'Todos' || d.getFullYear() === parseInt(year)) && (month === 'Todos' || d.getMonth() === parseInt(month)); }).reduce((sum, p) => sum + p.amount, 0); return acc; }, {});
-    const ctx = document.getElementById('payroll-department-chart').getContext('2d');
-    if(payrollDepartmentChartInstance) payrollDepartmentChartInstance.destroy();
-    payrollDepartmentChartInstance = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(departmentData), datasets: [{ label: 'Gasto por Departamento', data: Object.values(departmentData), backgroundColor: 'rgba(54, 162, 235, 0.6)' }] }, options: { scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: c => formatCurrency(c.parsed.y) } } } } });
-}
+            // Ocultar después de 5 segundos
+            setTimeout(() => {
+                msgElement.classList.add('hidden');
+            }, 5000);
+        };
+        
+        // Guardar o Actualizar Transacción
+        window.saveTransaction = async (event) => {
+            event.preventDefault();
 
-// --- 2.5 RENDERIZADO DEL MÓDULO GASOLINA ---
-function renderGasolinaTab() {
-    renderGasList();
-    renderGasAnalysis();
-}
+            const id = document.getElementById('transaction-id').value;
+            const type = document.getElementById('transaction-type').value;
+            const amount = parseFloat(document.getElementById('transaction-amount').value);
+            const description = document.getElementById('transaction-description').value;
+            const date = document.getElementById('transaction-date').value;
 
-function renderGasList() {
-    const gasTableBody = document.getElementById('gas-table-body');
-    const gasEmpty = document.getElementById('gas-empty');
-    if (allGasRecordsCache.length === 0) { gasEmpty.classList.remove('hidden'); gasTableBody.innerHTML = ''; return; }
-    gasEmpty.classList.add('hidden');
-    const sortedGas = [...allGasRecordsCache].sort((a,b) => new Date(b.date) - new Date(a.date));
-    gasTableBody.innerHTML = sortedGas.map(rec => ` <tr class="hover:bg-gray-50"> <td class="px-6 py-4"><div class="text-sm font-medium">${rec.vehicleName}</div><div class="text-xs text-gray-500">${rec.model}</div></td> <td class="px-6 py-4 text-sm">${new Date(rec.date).toLocaleString()}</td> <td class="px-6 py-4 text-sm font-bold text-right">${formatCurrency(rec.total)}</td> <td class="px-6 py-4 text-center"> ${rec.pdfData ? `<button onclick="viewGasReceipt('${rec.id}')" class="text-blue-600 hover:underline">Ver</button>` : '-'} </td> </tr>`).join('');
-}
+            if (isNaN(amount) || amount <= 0 || !description || !date) {
+                showTransactionMessage("Por favor, rellena todos los campos correctamente. El monto debe ser positivo."); 
+                return;
+            }
 
-function renderGasAnalysis() {
-    const year = document.getElementById('gas-analysis-year-filter').value;
-    const month = document.getElementById('gas-analysis-month-filter').value;
-    const driver = document.getElementById('gas-analysis-driver-filter').value;
-    const gasChartsContainer = document.getElementById('gas-charts-container');
-    const gasChartsEmpty = document.getElementById('gas-charts-empty');
-    const gasComparisonContainer = document.getElementById('gas-comparison-container');
-    let filtered = allGasRecordsCache;
-    if (year !== 'Todos') filtered = filtered.filter(rec => new Date(rec.date).getFullYear() === parseInt(year));
-    if (month !== 'Todos') filtered = filtered.filter(rec => new Date(rec.date).getMonth() === parseInt(month));
-    if (driver !== 'Todos') filtered = filtered.filter(rec => rec.vehicleName === driver);
-    if (filtered.length === 0) { gasChartsContainer.innerHTML = ''; gasChartsEmpty.classList.remove('hidden'); gasComparisonContainer.innerHTML = ''; if (gasLineChartInstance) { gasLineChartInstance.destroy(); gasLineChartInstance = null; } return; }
-    gasChartsEmpty.classList.add('hidden');
-    const groupedByVehicle = filtered.reduce((acc, rec) => { acc[rec.vehicleName] = (acc[rec.vehicleName] || []).concat(rec); return acc; }, {});
-    gasChartsContainer.innerHTML = '';
-    const currentYear = year === 'Todos' ? new Date().getFullYear() : parseInt(year);
-    Object.keys(gasChartInstances).forEach(key => gasChartInstances[key].destroy());
-    gasChartInstances = {};
-    Object.entries(groupedByVehicle).forEach(([vehicleName, records]) => { const chartId = `gas-chart-${vehicleName.replace(/[^a-zA-Z0-9]/g, '')}`; gasChartsContainer.innerHTML += `<div class="bg-gray-50 p-4 rounded-lg"><h3 class="text-lg text-center mb-4">${vehicleName}</h3><canvas id="${chartId}"></canvas></div>`; const monthlyTotals = Array(12).fill(0); records.forEach(rec => { const d = new Date(rec.date); if (d.getFullYear() === currentYear) { monthlyTotals[d.getMonth()] += rec.total; } }); const ctx = document.getElementById(chartId).getContext('2d'); gasChartInstances[chartId] = new Chart(ctx, { type: 'bar', data: { labels: MONTH_NAMES.map(m => m.substring(0,3)), datasets: [{ label: `Gasto en ${currentYear}`, data: monthlyTotals, backgroundColor: 'rgba(255, 99, 132, 0.7)' }] }, options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (c) => formatCurrency(c.parsed.y) } } } } }); });
-    const gasLineCtx = document.getElementById('gas-line-chart').getContext('2d');
-    const vehicleNames = Object.keys(groupedByVehicle);
-    const colors = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#14b8a6', '#ec4899'];
-    const lineChartDatasets = vehicleNames.map((vName, i) => { const monthlyTotals = Array(12).fill(0); groupedByVehicle[vName].forEach(rec => { const d = new Date(rec.date); if (d.getFullYear() === currentYear) { monthlyTotals[d.getMonth()] += rec.total; } }); return { label: vName, data: monthlyTotals, borderColor: colors[i % colors.length], fill: false }; });
-    if(gasLineChartInstance) gasLineChartInstance.destroy();
-    gasLineChartInstance = new Chart(gasLineCtx, { type: 'line', data: { labels: MONTH_NAMES.map(m => m.substring(0,3)), datasets: lineChartDatasets }, options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${formatCurrency(c.parsed.y)}` } } } } });
-    const comparisonData = {};
-    vehicleNames.forEach(v => comparisonData[v] = Array(12).fill(0));
-    filtered.forEach(rec => { const d = new Date(rec.date); if (d.getFullYear() === currentYear) { if (comparisonData[rec.vehicleName]) { comparisonData[rec.vehicleName][d.getMonth()] += rec.total; } } });
-    let tableHTML = `<table class="min-w-full text-sm"><thead><tr class="bg-gray-100"><th class="px-4 py-2 text-left">Vehículo</th>${MONTH_NAMES.map(m => `<th class="px-4 py-2 text-right">${m.substring(0,3)}</th>`).join('')}<th class="px-4 py-2 text-right font-bold bg-gray-200">Total</th></tr></thead><tbody>`;
-    Object.entries(comparisonData).forEach(([vName, totals]) => { const yearTotal = totals.reduce((a, b) => a + b, 0); if (yearTotal > 0) { tableHTML += `<tr><td class="px-4 py-2 font-medium">${vName}</td>${totals.map(t => `<td class="px-4 py-2 text-right">${t > 0 ? formatCurrency(t) : '-'}</td>`).join('')}<td class="px-4 py-2 text-right font-bold bg-gray-50">${formatCurrency(yearTotal)}</td></tr>`; } });
-    gasComparisonContainer.innerHTML = tableHTML + `</tbody></table>`;
-}
+            const transactionData = {
+                type: type,
+                amount: amount,
+                description: description,
+                date: date,
+                // Usamos el timestamp para un ordenamiento secundario si es necesario
+                timestamp: Date.now() 
+            };
 
-// --- 2.6 RENDERIZADO DEL MÓDULO PROYECCIONES ---
-function renderProyeccionesTab() {
-    const content = document.getElementById('projections-content');
-    const loader = document.getElementById('projections-loader');
-    
-    loader.classList.add('hidden');
-    content.classList.remove('hidden');
-    
-    let totalProjected = 0, totalCollected = 0, expectedMonthly = 0;
-    const monthlyData = {}; 
-    const yearlyData = {};
-    
-    allStudentsCache.forEach(student => {
-        const totalCost = parseFloat(student.totalCost || 0);
-        const paidAmount = (student.installmentsList || []).filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
-        totalProjected += totalCost;
-        totalCollected += paidAmount;
-        if (student.status === 'active' && paidAmount < totalCost) {
-            const nextPending = (student.installmentsList || []).find(p => p.status === 'pending');
-            if (nextPending) { const startDate = new Date(student.createdAt); const dueDate = new Date(startDate.setUTCMonth(startDate.getUTCMonth() + nextPending.installmentNumber - 1)); if (dueDate.getFullYear() === new Date().getFullYear() && dueDate.getMonth() === new Date().getMonth()){ expectedMonthly += parseFloat(student.monthlyAmount || 0); } }
-        }
-        (student.installmentsList || []).forEach(p => { if (p.status === 'paid' && p.paymentDate) { const date = new Date(p.paymentDate); const year = date.getUTCFullYear(); const month = (date.getUTCMonth() + 1).toString().padStart(2, '0'); const yearMonth = `${year}-${month}`; monthlyData[yearMonth] = (monthlyData[yearMonth] || 0) + p.amount; yearlyData[year] = (yearlyData[year] || 0) + p.amount; } });
-    });
+            const transactionsRef = getTransactionsCollectionRef();
+            if (!transactionsRef) return;
 
-    const totalPending = allStudentsCache.filter(s => s.status === 'active').reduce((sum, s) => { const paid = (s.installmentsList || []).filter(p => p.status === 'paid').reduce((pSum, p) => pSum + p.amount, 0); return sum + (s.totalCost - paid); }, 0);
+            try {
+                if (id) {
+                    // Editar transacción existente
+                    await setDoc(doc(transactionsRef, id), transactionData);
+                    showTransactionMessage("Transacción actualizada con éxito.", false);
+                } else {
+                    // Agregar nueva transacción
+                    await addDoc(transactionsRef, transactionData);
+                    showTransactionMessage("Nueva transacción agregada con éxito.", false);
+                }
 
-    document.getElementById('total-projected').textContent = formatCurrency(totalProjected);
-    document.getElementById('total-collected').textContent = formatCurrency(totalCollected);
-    document.getElementById('total-pending-balance').textContent = formatCurrency(totalPending);
-    document.getElementById('expected-monthly-income').textContent = formatCurrency(expectedMonthly);
-    
-    const monthlyCtx = document.getElementById('monthlyComparisonChart').getContext('2d');
-    const currentYear = new Date().getFullYear();
-    const monthlyChartData = MONTH_NAMES.map((_, i) => { const monthKey = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`; return monthlyData[monthKey] || 0; });
-    if(monthlyComparisonChartInstance) monthlyComparisonChartInstance.destroy();
-    monthlyComparisonChartInstance = new Chart(monthlyCtx, { type: 'bar', data: { labels: MONTH_NAMES, datasets: [{ label: `Ingresos Recaudados ${currentYear}`, data: monthlyChartData, backgroundColor: 'rgba(59, 130, 246, 0.7)' }] }, options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (c) => formatCurrency(c.parsed.y) } } } } });
+                // Dar tiempo para que el mensaje se vea antes de cerrar el modal
+                setTimeout(hideTransactionModal, 1500); 
+            } catch (e) {
+                showTransactionMessage(`Error al guardar la transacción: ${e.message}`);
+                console.error("Error al guardar la transacción:", e);
+            }
+        };
+        
+        // Función para editar: rellena el formulario y abre el modal
+        window.editTransaction = (id) => {
+            const transaction = transactions.find(t => t.id === id);
+            if (!transaction) return;
 
-    const yearlyCtx = document.getElementById('yearlyComparisonChart').getContext('2d');
-    const sortedYears = Object.keys(yearlyData).sort();
-    const yearlyChartData = sortedYears.map(year => yearlyData[year]);
-    if(yearlyComparisonChartInstance) yearlyComparisonChartInstance.destroy();
-    yearlyComparisonChartInstance = new Chart(yearlyCtx, { type: 'bar', data: { labels: sortedYears, datasets: [{ label: 'Ingresos Recaudados por Año', data: yearlyChartData, backgroundColor: 'rgba(22, 163, 74, 0.7)' }] }, options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (c) => formatCurrency(c.parsed.y) } } } } });
-}
+            // Llenar el formulario con los datos de la transacción
+            document.getElementById('transaction-id').value = transaction.id;
+            document.getElementById('transaction-type').value = transaction.type;
+            document.getElementById('transaction-amount').value = transaction.amount;
+            document.getElementById('transaction-description').value = transaction.description;
+            document.getElementById('transaction-date').value = transaction.date;
 
-// #############################################################################
-// sección VII: ACCIONES DE FORMULARIOS Y MANEJO DE EVENTOS
-// #############################################################################
+            document.getElementById('modal-title').textContent = "Editar Transacción";
+            window.showTransactionModal();
+        };
 
-async function addStudentFormSubmit(e) { e.preventDefault(); if(!await validateAction()) return; const isPaidInFull = document.getElementById('paid-in-full-checkbox').checked; const startDate = document.getElementById('student-start-date').value; let monthlyAmount, installmentsNumber, totalCost, regularMonthly, scholarship; if (isPaidInFull) { totalCost = parseFloat(document.getElementById('total-cost').value); installmentsNumber = parseInt(document.getElementById('program-duration').value, 10); monthlyAmount = totalCost; regularMonthly = totalCost; scholarship = 0; } else { regularMonthly = parseFloat(document.getElementById('regular-monthly-amount').value); scholarship = parseFloat(document.getElementById('scholarship-percentage').value) || 0; monthlyAmount = regularMonthly * (1 - scholarship / 100); installmentsNumber = parseInt(document.getElementById('installments-number').value, 10); totalCost = monthlyAmount * installmentsNumber; } const endDate = new Date(startDate + 'T12:00:00Z'); endDate.setUTCMonth(endDate.getUTCMonth() + installmentsNumber); const installmentsList = []; const paymentAmount = isPaidInFull ? totalCost : monthlyAmount; const loopCount = isPaidInFull ? 1 : installmentsNumber; for(let i=1; i <= loopCount; i++){ const isPaid = isPaidInFull; installmentsList.push({ installmentNumber: i, amount: paymentAmount, status: isPaid ? 'paid' : 'pending', paymentDate: isPaid ? new Date(startDate + 'T12:00:00Z').toISOString() : null, paymentMethod: isPaid ? 'Contado' : null, receiptData: null }); } const student = { id: 'student_' + Date.now(), name: document.getElementById('student-name').value, generation: document.getElementById('student-generation').value, institution: document.getElementById('student-institution').value, program: document.getElementById('student-program').value, regularMonthlyAmount: regularMonthly, scholarship: scholarship, monthlyAmount: monthlyAmount, totalCost: totalCost, status: 'active', createdAt: new Date(startDate + 'T12:00:00Z').toISOString(), programEndDate: endDate.toISOString(), installmentsList: installmentsList }; allStudentsCache.push(student); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-student-form').reset(); document.getElementById('student-start-date').valueAsDate = new Date(); togglePaidInFull(); calculateDiscountedAmount(); }
-async function addExpenseFormSubmit(e) { e.preventDefault(); if (!await validateAction()) return; const fileInput = document.getElementById('expense-file'); let receiptData = null; if (fileInput.files[0]) { try { receiptData = await fileToBase64(fileInput.files[0]); } catch (err) { console.error("Error", err); return; } } const expense = { id: 'exp_' + Date.now(), date: document.getElementById('expense-date').value, provider: document.getElementById('expense-provider').value, reference: document.getElementById('expense-reference').value, detail: document.getElementById('expense-detail').value, amount: parseFloat(document.getElementById('expense-amount').value), concept: document.getElementById('expense-concept').value, company: document.getElementById('expense-company').value, classification: document.getElementById('expense-classification').value, receiptData }; allExpensesCache.push(expense); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-expense-form').reset(); document.getElementById('expense-file-name').textContent = ''; }
-async function addEmployeeFormSubmit(e) { e.preventDefault(); if (!await validateAction()) return; const employee = { id: 'emp_' + Date.now(), name: document.getElementById('employee-name').value, position: document.getElementById('employee-position').value, department: document.getElementById('employee-department').value, company: document.getElementById('employee-company').value, salary: parseFloat(document.getElementById('employee-salary').value), payments: [], status: 'active', createdAt: new Date().toISOString() }; allEmployeesCache.push(employee); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-employee-form').reset(); }
-async function addGasFormSubmit(e) { e.preventDefault(); if (!await validateAction()) return; const fileInput = document.getElementById('gas-file'); let pdfData = null; if (fileInput.files[0]) { try { pdfData = await fileToBase64(fileInput.files[0]); } catch(err) { alert("Error al procesar archivo."); return; } } let driverName = document.getElementById('gas-driver-select').value; const driverData = drivers.find(d => d.name === driverName); if (driverData && driverData.isViaticos) { const viaticosFor = document.getElementById('gas-viaticos-name').value; if (viaticosFor) { driverName = `Viáticos (${viaticosFor})`; } } const newRecord = { id: 'gas_' + Date.now(), vehicleName: driverName, card: document.getElementById('gas-card').value, brand: document.getElementById('gas-brand').value, model: document.getElementById('gas-model-select').value, date: document.getElementById('gas-date').value, quantity: parseFloat(document.getElementById('gas-quantity').value), price: parseFloat(document.getElementById('gas-price').value), subtotal: parseFloat(document.getElementById('gas-subtotal').value), iva: (parseFloat(document.getElementById('gas-subtotal').value) || 0) * 0.16, total: parseFloat(document.getElementById('gas-total').value), pdfData: pdfData }; allGasRecordsCache.push(newRecord); saveAllDataToLocalStorage(); renderAllModules(); document.getElementById('add-gas-form').reset(); document.getElementById('gas-driver-select').dispatchEvent(new Event('change')); document.getElementById('gas-file-name').textContent = ''; }
-async function handleStudentListClick(e) { const button = e.target.closest('button'); if(!button || !button.dataset.id) return; const id = button.dataset.id; if (button.classList.contains('manage-payments-btn')) { openPaymentsModal(id); return; } if (await validateAction()) { if (button.classList.contains('delete-btn')) openDeleteModal(id, 'student'); if (button.classList.contains('toggle-status-btn')) toggleStudentStatus(id); } }
-async function handleExpenseListClick(e) { const button = e.target.closest('button.delete-expense-btn'); if(button) { if (await validateAction()) { openDeleteModal(button.dataset.id, 'expense'); } } }
-async function handleEmployeeListClick(e) { const button = e.target.closest('button'); if (!button || !button.dataset.id) return; const employeeId = button.dataset.id; if (button.classList.contains('pay-btn')) { openPayrollPaymentModal(employeeId); } else if (button.classList.contains('history-btn')) { openPayrollHistoryModal(employeeId); } else if (button.classList.contains('toggle-status-employee-btn')) { toggleEmployeeStatus(employeeId); } else if (button.classList.contains('delete-employee-btn')) { openDeleteModal(employeeId, 'employee'); } }
+        // Función para eliminar: usa el modal de confirmación
+        window.deleteTransaction = async (id) => {
+            const action = async () => {
+                const transactionsRef = getTransactionsCollectionRef();
+                if (!transactionsRef) return;
+                
+                try {
+                    await deleteDoc(doc(transactionsRef, id));
+                    console.log("Transacción eliminada con ID:", id);
+                } catch (e) {
+                    console.error("Error al eliminar la transacción:", e);
+                }
+            };
+            
+            // Usar el modal de confirmación personalizado
+            showConfirmModal("Eliminar Transacción", "¿Estás seguro de que quieres eliminar esta transacción? Esta acción es irreversible.", action);
+        };
 
-// #############################################################################
-// sección VIII: FUNCIONES DE MODALES Y ACCIONES ESPECÍFICAS
-// #############################################################################
+        // --- UTILS ---
+        const formatCurrency = (value) => `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
-function calculateDiscountedAmount() { const regularAmount = parseFloat(document.getElementById('regular-monthly-amount').value) || 0; const scholarship = parseFloat(document.getElementById('scholarship-percentage').value) || 0; const finalAmount = regularAmount * (1 - scholarship / 100); document.getElementById('monthly-amount').value = formatCurrency(finalAmount); }
-function updateProgramOptions() { const select = document.getElementById('student-institution'); const programSelect = document.getElementById('student-program'); const programs = programsByInstitution[select.value]; programSelect.innerHTML = ''; for (const group in programs) { if(programs[group].length > 0) { const optgroup = document.createElement('optgroup'); optgroup.label = group; programs[group].forEach(pName => { const option = document.createElement('option'); option.value = pName; option.textContent = pName; optgroup.appendChild(option); }); programSelect.appendChild(optgroup); } } }
-function togglePaidInFull() { const isChecked = document.getElementById('paid-in-full-checkbox').checked; document.getElementById('monthly-payment-section').classList.toggle('hidden', isChecked); document.getElementById('paid-in-full-details').classList.toggle('hidden', !isChecked); document.getElementById('regular-monthly-amount').required = !isChecked; document.getElementById('installments-number').required = !isChecked; document.getElementById('total-cost').required = isChecked; document.getElementById('program-duration').required = isChecked; }
-function setupGasForm() { const driverSelect = document.getElementById('gas-driver-select'); const modelSelect = document.getElementById('gas-model-select'); driverSelect.innerHTML = drivers.map(d => `<option value="${d.name}">${d.name}</option>`).join(''); modelSelect.innerHTML = cars.map(c => `<option value="${c.model}">${c.model}</option>`).join(''); driverSelect.addEventListener('change', () => { const driver = drivers.find(d => d.name === driverSelect.value); const cardInput = document.getElementById('gas-card'); const viaticosDetails = document.getElementById('gas-viaticos-details'); cardInput.value = driver ? driver.card : ''; const isViaticos = driver && driver.isViaticos; viaticosDetails.classList.toggle('hidden', !isViaticos); cardInput.readOnly = !isViaticos; cardInput.classList.toggle('bg-gray-200', !isViaticos); cardInput.classList.toggle('bg-gray-50', isViaticos); }); modelSelect.addEventListener('change', () => { const car = cars.find(c => c.model === modelSelect.value); document.getElementById('gas-brand').value = car ? car.brand : ''; }); driverSelect.dispatchEvent(new Event('change')); }
-function calculateGasIva() { const subtotal = parseFloat(document.getElementById('gas-subtotal').value) || 0; document.getElementById('gas-iva').value = formatCurrency(subtotal * 0.16); }
-async function toggleStudentStatus(id){ const student = allStudentsCache.find(s => s.id === id); if(!student) return; student.status = student.status === 'active' ? 'inactive' : 'active'; saveAllDataToLocalStorage(); renderAllModules(); }
-function exportMonthlyReportToCSV() { if (monthlyReportCache.length === 0) { alert('No hay datos para exportar.'); return; } let csvContent = "data:text/csv;charset=utf-8,Alumno,Generacion,Monto,Fecha de Vencimiento,Estado\r\n"; monthlyReportCache.forEach(row => { const cleanName = `"${row.name.replace(/"/g, '""')}"`; const statusText = row.status.charAt(0).toUpperCase() + row.status.slice(1); csvContent += `${cleanName},${row.generation},${row.amount},${row.dueDate},${statusText}\r\n`; }); const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); const monthFilter = document.getElementById('month-filter'); const yearFilter = document.getElementById('year-filter'); link.setAttribute("download", `reporte_${monthFilter.options[monthFilter.selectedIndex].text}_${yearFilter.value}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
-async function toggleEmployeeStatus(employeeId) { if (!await validateAction()) return; const employeeIndex = allEmployeesCache.findIndex(emp => emp.id === employeeId); if (employeeIndex > -1) { const currentStatus = allEmployeesCache[employeeIndex].status; allEmployeesCache[employeeIndex].status = currentStatus === 'active' ? 'inactive' : 'active'; if (currentStatus === 'active') { allEmployeesCache[employeeIndex].inactiveDate = new Date().toISOString(); } else { delete allEmployeesCache[employeeIndex].inactiveDate; } saveAllDataToLocalStorage(); renderAllModules(); } }
-async function exportGasAnalysisToPDF() { const { jsPDF } = window.jspdf; const el = document.getElementById('gas-analysis-content-to-export'); el.style.backgroundColor = 'white'; const canvas = await html2canvas(el, { scale: 2 }); el.style.backgroundColor = ''; const imgData = canvas.toDataURL('image/png'); const pdf = new jsPDF({ orientation: 'l', unit: 'px', format: [canvas.width, canvas.height] }); pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height); pdf.save(`analisis-gasolina.pdf`); }
-async function openPaymentsModal(id, editingIndex = null) { const student = allStudentsCache.find(s => s.id === id); if (!student) return; const startDate = new Date(student.createdAt); const modal = document.getElementById('payments-modal'); const installmentsHTML = (student.installmentsList || []).map((installment, i) => { const isEditing = editingIndex === i; if (installment.status === 'paid' && !isEditing) { return ` <li class="p-3 bg-green-50 rounded-md"> <div class="flex justify-between items-start"> <div> <p class="font-medium text-green-800">Mensualidad ${installment.installmentNumber} - Pagada</p> <p class="text-xs text-gray-500">Fecha: ${new Date(installment.paymentDate).toLocaleDateString()} | Método: ${installment.paymentMethod || 'N/A'}</p> ${installment.receiptData ? `<a href="${installment.receiptData}" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-500 hover:underline">Ver Comprobante</a>` : ''} </div> <div class="flex items-center gap-2"> <button class="edit-payment-btn text-xs text-yellow-600 hover:text-yellow-800" data-id="${id}" data-index="${i}">Editar</button> <button class="generate-invoice-btn text-xs text-gray-600 hover:text-blue-600" data-id="${id}" data-index="${i}">Recibo</button> </div> </div> </li>`; } const dueDate = new Date(startDate); dueDate.setUTCMonth(startDate.getUTCMonth() + i); const dueDateString = dueDate.toISOString().split('T')[0]; const paymentDate = installment.paymentDate ? new Date(installment.paymentDate).toISOString().split('T')[0] : dueDateString; const paymentMethod = installment.paymentMethod || 'Transferencia'; return ` <li class="p-3 ${isEditing ? 'bg-yellow-50 ring-2 ring-yellow-400' : 'bg-gray-50'} rounded-md"> <div class="flex justify-between items-center"> <p class="font-medium">Mensualidad ${installment.installmentNumber} - <span class="${isEditing ? 'text-green-700' : 'text-yellow-700'}">${isEditing ? 'Editando' : 'Pendiente'}</span></p> <p class="font-bold">${formatCurrency(installment.amount)}</p> </div> <div class="mt-3 space-y-2"> <input type="date" class="payment-date-input w-full border-gray-300 rounded-md p-2 text-sm" data-index="${i}" value="${paymentDate}"> <select class="payment-method-input w-full border-gray-300 rounded-md p-2 text-sm" data-index="${i}"> <option value="Transferencia" ${paymentMethod === 'Transferencia' ? 'selected' : ''}>Transferencia</option> <option value="Tarjeta" ${paymentMethod === 'Tarjeta' ? 'selected' : ''}>Tarjeta</option> <option value="Efectivo" ${paymentMethod === 'Efectivo' ? 'selected' : ''}>Efectivo</option> </select> <input type="file" id="receipt-file-input-${i}" class="receipt-file-input hidden" data-index="${i}" accept="image/*,.pdf"> <button class="upload-btn w-full text-sm border border-gray-300 py-1.5 rounded-md" data-index="${i}">${isEditing ? 'Cambiar Comprobante' : 'Adjuntar Comprobante'}</button> <span id="file-name-span-${i}" class="file-name-span text-xs text-gray-500 block" data-index="${i}">${installment.receiptData ? '(Archivo actual guardado)' : ''}</span> ${isEditing ? `<div class="flex gap-2"> <button class="cancel-edit-btn w-full bg-gray-500 text-white py-2 rounded-lg" data-id="${id}">Cancelar</button> <button class="save-payment-btn w-full bg-blue-600 text-white py-2 rounded-lg" data-id="${id}" data-index="${i}">Guardar</button> </div>` : `<button class="register-payment-btn w-full bg-green-600 text-white py-2 rounded-lg" data-id="${id}" data-index="${i}">Registrar Pago</button>` } </div> </li>`; }).join(''); modal.innerHTML = ` <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col"> <div class="p-6 border-b"><h3 class="text-xl font-bold">${student.name}</h3><p class="text-sm text-gray-500">${student.institution} - ${student.program}</p></div> <div class="p-6 overflow-y-auto"><ul class="space-y-3">${installmentsHTML}</ul></div> <div class="p-4 bg-gray-50 text-right border-t"><button class="close-modal-btn px-4 py-2 bg-gray-200 rounded-md">Cerrar</button></div> </div>`; modal.classList.remove('hidden'); modal.querySelector('.close-modal-btn').onclick = () => modal.classList.add('hidden'); const modalContent = modal.querySelector('.overflow-y-auto'); modalContent.addEventListener('click', async (e) => { const target = e.target; if (target.classList.contains('upload-btn')) { const index = target.dataset.index; modal.querySelector(`#receipt-file-input-${index}`).click(); return; } if (!target.dataset.id) return; const studentId = target.dataset.id; const index = parseInt(target.dataset.index, 10); if (target.classList.contains('edit-payment-btn')) { openPaymentsModal(studentId, index); } else if (target.classList.contains('cancel-edit-btn')) { openPaymentsModal(studentId, null); } else if (target.classList.contains('register-payment-btn') || target.classList.contains('save-payment-btn')) { if (!await validateAction()) return; const date = modal.querySelector(`.payment-date-input[data-index='${index}']`).value; const method = modal.querySelector(`.payment-method-input[data-index='${index}']`).value; const fileInput = modal.querySelector(`.receipt-file-input[data-index='${index}']`); const studentToUpdate = allStudentsCache.find(s => s.id === studentId); const updatedInstallments = [...studentToUpdate.installmentsList]; let receiptData = updatedInstallments[index].receiptData || null; if (fileInput.files[0]) { try { receiptData = await fileToBase64(fileInput.files[0]); } catch (err) { console.error("Error", err); return; } } updatedInstallments[index].status = 'paid'; updatedInstallments[index].paymentDate = new Date(date + 'T12:00:00Z').toISOString(); updatedInstallments[index].paymentMethod = method; updatedInstallments[index].receiptData = receiptData; const studentIndex = allStudentsCache.findIndex(s => s.id === studentId); allStudentsCache[studentIndex].installmentsList = updatedInstallments; saveAllDataToLocalStorage(); openPaymentsModal(studentId, null); renderAllModules(); } else if (target.classList.contains('generate-invoice-btn')) { generateInvoice(studentId, index); } }); modal.querySelectorAll('.receipt-file-input').forEach(input => { input.onchange = () => { handleFileUpload(input.id, `file-name-span-${input.dataset.index}`); }; }); }
-function generateInvoice(studentId, paymentIndex) { const student = allStudentsCache.find(s => s.id === studentId); const installment = student?.installmentsList?.[paymentIndex]; if (!student || !installment) return; const modal = document.getElementById('invoice-modal'); const hasScholarship = (student.scholarship || 0) > 0; let subtotal = student.regularMonthlyAmount; let discountAmount = hasScholarship ? student.regularMonthlyAmount * (student.scholarship / 100) : 0; modal.innerHTML = `<div class="bg-white rounded-lg shadow-xl w-full max-w-2xl"><div id="invoice-content" class="p-10 bg-white text-gray-800 font-sans"><div class="flex justify-between items-start mb-8"><div><h1 class="text-2xl font-bold text-gray-900 mt-2">${student.institution}</h1></div><div class="text-right"><h2 class="text-3xl font-bold text-gray-400 uppercase tracking-widest">Recibo</h2><p class="text-sm text-gray-500 mt-1">#${student.id.slice(8,14).toUpperCase()}-${installment.installmentNumber}</p></div></div><div class="grid grid-cols-2 gap-8 mb-10"><div class="text-sm"><p class="font-bold text-gray-700">De:</p><p>${student.institution}</p><p>Veracruz, México</p></div><div class="text-sm text-right"><p class="font-bold text-gray-700">Para:</p><p>${student.name}</p><p>Generación: ${student.generation}</p><p>Programa: ${student.program}</p></div></div><table class="w-full text-sm"><thead><tr class="bg-blue-600 text-white"><th class="text-left font-semibold p-3">Descripción</th><th class="text-right font-semibold p-3">Importe</th></tr></thead><tbody><tr class="border-b"><td class="p-3">Pago de Mensualidad ${installment.installmentNumber}</td><td class="text-right p-3">${formatCurrency(installment.amount)}</td></tr></tbody></table><div class="flex justify-end mt-6"><div class="w-full md:w-1/2 text-sm">${hasScholarship ? `<div class="flex justify-between py-2 border-b"><span class="text-gray-600">Subtotal:</span><span class="font-medium">${formatCurrency(subtotal)}</span></div><div class="flex justify-between py-2 border-b"><span class="text-gray-600">Beca (${student.scholarship}%):</span><span class="font-medium text-red-500">-${formatCurrency(discountAmount)}</span></div>` : ''}<div class="flex justify-between py-2 bg-gray-100 rounded-b-lg px-2"><span class="font-bold text-gray-800 text-base">Total Pagado:</span><span class="font-bold text-gray-900 text-base">${formatCurrency(installment.amount)}</span></div></div></div><div class="border-t-2 mt-10 pt-6 text-xs text-gray-500 text-center"><p class="font-semibold">¡Gracias por su pago!</p><p>Método de pago: ${installment.paymentMethod}</p></div></div><div class="p-4 bg-gray-50 flex justify-end gap-2"><button id="download-invoice-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md">Descargar PDF</button><button id="close-invoice-btn" class="px-4 py-2 bg-gray-200 rounded-md">Cerrar</button></div></div>`; modal.classList.remove('hidden'); modal.querySelector('#close-invoice-btn').onclick = () => modal.classList.add('hidden'); modal.querySelector('#download-invoice-btn').onclick = () => downloadInvoiceAsPDF(student, installment); }
-async function downloadInvoiceAsPDF(student, installment) { const { jsPDF } = window.jspdf; const el = document.getElementById('invoice-content'); el.style.backgroundColor = 'white'; const canvas = await html2canvas(el, { scale: 2 }); el.style.backgroundColor = ''; const imgData = canvas.toDataURL('image/png'); const pdf = new jsPDF({ o: 'p', u: 'px', f: [canvas.width, canvas.height] }); pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height); pdf.save(`recibo-${student.name.replace(/ /g, '_')}-mensualidad_${installment.installmentNumber}.pdf`); }
-async function openPayrollPaymentModal(employeeId) { const employee = allEmployeesCache.find(emp => emp.id === employeeId); if (!employee) return; const modal = document.getElementById('payroll-payment-modal'); modal.innerHTML = `<div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md"><h3 class="text-lg font-bold mb-4">Registrar Pago a ${employee.name}</h3><form id="payroll-payment-form" class="space-y-4"><div><label for="payroll-amount" class="block text-sm">Monto ($)</label><input type="number" id="payroll-amount" required min="0.01" step="0.01" value="${employee.salary/2}" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div><div><label for="payroll-date" class="block text-sm">Fecha</label><input type="date" id="payroll-date" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"></div><div><label for="payroll-quincena" class="block text-sm">Quincena</label><select id="payroll-quincena" required class="mt-1 block w-full bg-gray-50 p-3 rounded-lg"><option value="1">1ra Quincena</option><option value="2">2da Quincena</option></select></div><div><label class="block text-sm">Comprobante</label><input type="file" id="payroll-receipt-file" class="hidden"><button type="button" id="payroll-upload-btn" class="w-full mt-1 text-sm border py-2 rounded-md">Seleccionar Archivo</button><span id="payroll-file-name" class="text-xs text-gray-500 block mt-1"></span></div><div class="flex justify-end gap-2 pt-4"><button type="button" class="close-modal-btn px-4 py-2 bg-gray-200 rounded-md">Cancelar</button><button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md">Confirmar</button></div></form></div>`; modal.classList.remove('hidden'); document.getElementById('payroll-date').valueAsDate = new Date(); modal.querySelector('.close-modal-btn').onclick = () => modal.classList.add('hidden'); modal.querySelector('#payroll-upload-btn').onclick = () => document.getElementById('payroll-receipt-file').click(); document.getElementById('payroll-receipt-file').onchange = () => handleFileUpload('payroll-receipt-file', 'payroll-file-name'); modal.querySelector('#payroll-payment-form').onsubmit = async (e) => { e.preventDefault(); if (!await validateAction()) return; let receiptData = null; const fileInput = document.getElementById('payroll-receipt-file'); if (fileInput.files[0]) { try { receiptData = await fileToBase64(fileInput.files[0]); } catch(err) { console.error("Error", err); return; } } const employeeIndex = allEmployeesCache.findIndex(emp => emp.id === employeeId); if (employeeIndex > -1) { allEmployeesCache[employeeIndex].payments.push({ id: 'pay_' + Date.now(), amount: parseFloat(document.getElementById('payroll-amount').value), date: new Date(document.getElementById('payroll-date').value + 'T12:00:00Z').toISOString(), quincena: parseInt(document.getElementById('payroll-quincena').value), receiptData }); saveAllDataToLocalStorage(); renderAllModules(); } modal.classList.add('hidden'); }; }
-function openPayrollHistoryModal(employeeId) { const employee = allEmployeesCache.find(emp => emp.id === employeeId); if (!employee) return; const modal = document.getElementById('payroll-history-modal'); let historyHTML = '<p class="text-center text-gray-500">No hay pagos registrados.</p>'; if (employee.payments.length > 0) { historyHTML = [...employee.payments].sort((a,b) => new Date(b.date) - new Date(a.date)).map(p => `<li class="p-3 bg-gray-50 rounded-md"><div class="flex justify-between items-center"><div><p class="font-medium">${formatCurrency(p.amount)}</p><p class="text-xs text-gray-500">${new Date(p.date).toLocaleDateString()} - ${p.quincena === 1 ? '1ra' : '2da'} Quincena</p></div>${p.receiptData ? `<button onclick="viewPayrollReceipt('${employee.id}', '${p.id}')" class="text-xs text-blue-500 hover:underline">Ver</button>` : ''}</div></li>`).join(''); } modal.innerHTML = `<div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col"><div class="p-6 border-b"><h3 class="text-xl font-bold">Historial de Pagos de ${employee.name}</h3></div><div class="p-6 overflow-y-auto"><ul class="space-y-3">${historyHTML}</ul></div><div class="p-4 bg-gray-50 text-right border-t"><button class="close-modal-btn px-4 py-2 bg-gray-200 rounded-md">Cerrar</button></div></div>`; modal.classList.remove('hidden'); modal.querySelector('.close-modal-btn').onclick = () => modal.classList.add('hidden'); }
+        // --- RENDERIZADO DE VISTAS ---
 
-// #############################################################################
-// sección IX: MODALES Y FUNCIONES GLOBALES
-// #############################################################################
+        // Función para renderizar la tabla de transacciones
+        const renderTransactionsList = () => {
+            const content = document.getElementById('content-transactions');
+            
+            // Contenido de la pestaña Transacciones
+            content.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 overflow-x-auto">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Listado de Transacciones</h3>
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Filas inyectadas por JS -->
+                        </tbody>
+                    </table>
+                    ${transactions.length === 0 ? '<p class="px-6 py-4 text-center text-gray-500">No hay transacciones registradas.</p>' : ''}
+                </div>
+            `;
+            
+            const tbody = document.getElementById('transactions-table-body');
+            if (!tbody) return;
 
-function validateAction() { return new Promise(resolve => { const modal = document.getElementById('auth-modal'); modal.innerHTML = `<div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm"><h3 class="text-lg font-bold text-center mb-4">Validación Requerida</h3><div class="space-y-4"><div><label for="auth-user" class="block text-sm">Usuario</label><input type="text" id="auth-user" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg" value="Dulce" readonly></div><div><label for="auth-pass" class="block text-sm">Contraseña</label><input type="password" id="auth-pass" class="mt-1 block w-full bg-gray-50 p-3 rounded-lg" autofocus></div><p id="auth-error" class="text-red-500 text-sm text-center hidden">Incorrecto.</p><div class="flex gap-2 pt-2"><button id="auth-cancel-btn" class="w-full py-2 px-4 bg-gray-200 rounded-md">Cancelar</button><button id="auth-confirm-btn" class="w-full py-2 px-4 bg-blue-600 text-white rounded-md">Confirmar</button></div></div></div>`; modal.classList.remove('hidden'); const passField = modal.querySelector('#auth-pass'); const errorEl = modal.querySelector('#auth-error'); const closeModal = () => modal.classList.add('hidden'); modal.querySelector('#auth-cancel-btn').onclick = () => { closeModal(); resolve(false); }; modal.querySelector('#auth-confirm-btn').onclick = () => { if (passField.value === '1234') { closeModal(); resolve(true); } else { errorEl.classList.remove('hidden'); } }; }); }
-async function openDeleteModal(id, type) { const modal = document.getElementById('delete-modal'); let message = '', confirmAction = null; switch (type) { case 'student': message = '¿Confirmas la eliminación de este alumno?'; confirmAction = () => { allStudentsCache = allStudentsCache.filter(s => s.id !== id); }; break; case 'expense': message = '¿Confirmas la eliminación de este egreso?'; confirmAction = () => { allExpensesCache = allExpensesCache.filter(e => e.id !== id); }; break; case 'employee': message = '¿Confirmas la eliminación de este empleado?'; confirmAction = () => { allEmployeesCache = allEmployeesCache.filter(emp => emp.id !== id); }; break; } modal.innerHTML = `<div class="p-5 w-96 shadow-lg rounded-2xl bg-white"><h3 class="text-lg text-center">Eliminar Registro</h3><p class="text-sm text-gray-500 text-center mt-2">${message}</p><div class="flex justify-center gap-4 mt-6"><button class="px-4 py-2 bg-gray-200 rounded-md" onclick="document.getElementById('delete-modal').classList.add('hidden')">Cancelar</button><button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 text-white rounded-md">Eliminar</button></div></div>`; modal.classList.remove('hidden'); modal.querySelector('#confirm-delete-btn').onclick = () => { confirmAction(); saveAllDataToLocalStorage(); renderAllModules(); modal.classList.add('hidden'); }; }
-window.viewExpenseReceipt = (id) => { const item = allExpensesCache.find(i => i.id === id); if (item && item.receiptData) { const win = window.open(); win.document.write(`<iframe src="${item.receiptData}" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;"></iframe>`); } }
-window.viewPayrollReceipt = (empId, payId) => { const emp = allEmployeesCache.find(e => e.id === empId); const payment = emp?.payments.find(p => p.id === payId); if (payment && payment.receiptData) { const win = window.open(); win.document.write(`<iframe src="${payment.receiptData}" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;"></iframe>`); } }
-window.viewGasReceipt = (id) => { const item = allGasRecordsCache.find(i => i.id === id); if (item && item.pdfData) { const win = window.open(); win.document.write(`<iframe src="${item.pdfData}" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;"></iframe>`); } }
+            // Ordenar por fecha (más reciente primero), ya que Firestore no se ordena por defecto sin índices.
+            // Si las fechas son iguales, usamos el timestamp
+            const sortedTransactions = transactions.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                if (dateB.getTime() !== dateA.getTime()) {
+                    return dateB - dateA; // Ordenar por fecha
+                }
+                return b.timestamp - a.timestamp; // Si las fechas son iguales, ordenar por timestamp
+            });
+
+            tbody.innerHTML = sortedTransactions.map(t => {
+                const isIncome = t.type === 'Ingreso';
+                const amountClass = isIncome ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+                const formattedAmount = formatCurrency(t.amount); 
+                
+                return `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${t.date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${t.description}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isIncome ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${t.type}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm ${amountClass}">
+                            ${formattedAmount}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                            <button onclick="editTransaction('${t.id}')" class="text-blue-600 hover:text-blue-900 transition-colors">Editar</button>
+                            <button onclick="deleteTransaction('${t.id}')" class="text-red-600 hover:text-red-900 transition-colors">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        // Función para actualizar el resumen del Dashboard
+        const updateDashboardSummary = () => {
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            transactions.forEach(t => {
+                if (t.type === 'Ingreso') {
+                    totalIncome += t.amount;
+                } else if (t.type === 'Egreso') {
+                    totalExpense += t.amount;
+                }
+            });
+
+            const currentBalance = totalIncome - totalExpense;
+
+            const balanceClass = currentBalance >= 0 ? 'text-2xl font-bold text-green-600' : 'text-2xl font-bold text-red-600';
+
+            const dashboardContent = document.getElementById('content-dashboard');
+            dashboardContent.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                    <!-- Tarjeta de Saldo Actual -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
+                        <p class="text-sm font-medium text-gray-500">Saldo Actual</p>
+                        <p class="${balanceClass} mt-1">${formatCurrency(currentBalance)}</p>
+                    </div>
+                    <!-- Tarjeta de Ingresos Totales -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
+                        <p class="text-sm font-medium text-gray-500">Ingresos Totales</p>
+                        <p class="text-2xl font-bold text-green-600 mt-1">${formatCurrency(totalIncome)}</p>
+                    </div>
+                    <!-- Tarjeta de Egresos Totales -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-red-500">
+                        <p class="text-sm font-medium text-gray-500">Egresos Totales</p>
+                        <p class="text-2xl font-bold text-red-600 mt-1">${formatCurrency(totalExpense)}</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Resumen de la Actividad</h3>
+                    <p class="text-gray-600">Total de transacciones registradas: <span class="font-bold text-lg text-emerald-600">${transactions.length}</span></p>
+                </div>
+            `;
+        };
+
+        // Función para renderizar la pestaña de Reportes
+        const renderReports = () => {
+            // 1. Agrupar transacciones por mes y año
+            const monthlyData = transactions.reduce((acc, t) => {
+                // Formato YYYY-MM
+                const monthYear = t.date.substring(0, 7); 
+                const amount = t.amount;
+                const type = t.type;
+
+                if (!acc[monthYear]) {
+                    acc[monthYear] = { Ingreso: 0, Egreso: 0 };
+                }
+
+                acc[monthYear][type] += amount;
+                return acc;
+            }, {});
+
+            // 2. Preparar datos para Chart.js
+            const sortedMonths = Object.keys(monthlyData).sort();
+            const labels = sortedMonths.map(my => {
+                const [year, month] = my.split('-');
+                // Simplemente muestra el mes, el año ya está implícito en el orden
+                const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+                return `${monthNames[parseInt(month) - 1]}-${year.substring(2)}`;
+            });
+
+            const incomeData = sortedMonths.map(my => monthlyData[my].Ingreso);
+            const expenseData = sortedMonths.map(my => monthlyData[my].Egreso);
+
+            // 3. Calcular Ganancias y Pérdidas totales para el reporte
+            let totalIncome = 0;
+            let totalExpense = 0;
+            transactions.forEach(t => {
+                if (t.type === 'Ingreso') totalIncome += t.amount;
+                else totalExpense += t.amount;
+            });
+            const netProfit = totalIncome - totalExpense;
+            const netProfitClass = netProfit >= 0 ? 'text-green-600' : 'text-red-600';
 
 
-}); // <-- Esta es la línea final del script completo, la mantendremos al final de todo.
+            // 4. Renderizar el HTML de la pestaña de Reportes
+            const content = document.getElementById('content-reports');
+            content.innerHTML = `
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">Reporte de Flujo de Efectivo y P&G</h3>
+                
+                <!-- Tarjetas de Resumen P&G (Ganancias y Pérdidas) -->
+                <div id="pg-summary" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- Ingresos -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
+                        <p class="text-sm font-medium text-gray-500">Ingresos Totales</p>
+                        <p class="text-xl font-bold text-green-600 mt-1">${formatCurrency(totalIncome)}</p>
+                    </div>
+                    <!-- Egresos -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-red-500">
+                        <p class="text-sm font-medium text-gray-500">Egresos Totales</p>
+                        <p class="text-xl font-bold text-red-600 mt-1">${formatCurrency(totalExpense)}</p>
+                    </div>
+                    <!-- Utilidad Neta -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
+                        <p class="text-sm font-medium text-gray-500">Utilidad Neta</p>
+                        <p class="text-xl font-bold ${netProfitClass} mt-1">${formatCurrency(netProfit)}</p>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Barras Mensual -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h4 class="text-xl font-semibold text-gray-700 mb-4">Ingresos vs Egresos Mensuales</h4>
+                    <div class="relative h-96">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                    ${transactions.length === 0 ? '<p class="text-center text-gray-500 mt-4">Agrega transacciones para ver el gráfico.</p>' : ''}
+                </div>
+            `;
+
+            // 5. Destruir gráfico anterior si existe y crear el nuevo
+            if (monthlyChart) {
+                monthlyChart.destroy();
+            }
+
+            if (transactions.length > 0) {
+                const ctx = document.getElementById('monthlyChart').getContext('2d');
+                monthlyChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Ingresos',
+                                data: incomeData,
+                                backgroundColor: 'rgba(16, 185, 129, 0.7)', // emerald-500
+                                borderColor: 'rgba(5, 150, 105, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Egresos',
+                                data: expenseData,
+                                backgroundColor: 'rgba(239, 68, 68, 0.7)', // red-500
+                                borderColor: 'rgba(220, 38, 38, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Flujo de Efectivo'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return formatCurrency(value);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+        
+        // --- LÓGICA DE MODALES (Transacción y Confirmación) ---
+        
+        window.showTransactionModal = () => {
+            // Limpiar el formulario y prepararlo para una nueva transacción
+            document.getElementById('transaction-form').reset();
+            document.getElementById('transaction-id').value = '';
+            document.getElementById('transaction-date').valueAsDate = new Date(); // Establecer fecha actual
+            document.getElementById('modal-title').textContent = "Nueva Transacción";
+            document.getElementById('transaction-message').classList.add('hidden'); // Ocultar mensaje de error anterior
+            
+            document.getElementById('transaction-modal').classList.remove('hidden');
+        };
+
+        window.hideTransactionModal = () => {
+            document.getElementById('transaction-modal').classList.add('hidden');
+        };
+
+        // Función genérica de confirmación (reemplaza window.confirm)
+        const showConfirmModal = (title, message, onConfirm) => {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            
+            const modal = document.getElementById('confirm-modal');
+            const btnProceed = document.getElementById('confirm-proceed');
+            const btnCancel = document.getElementById('confirm-cancel');
+
+            // Limpiar listeners anteriores
+            btnProceed.replaceWith(btnProceed.cloneNode(true));
+            btnCancel.replaceWith(btnCancel.cloneNode(true));
+            
+            const newBtnProceed = document.getElementById('confirm-proceed');
+            const newBtnCancel = document.getElementById('confirm-cancel');
+
+            // Configurar el botón de proceder
+            newBtnProceed.onclick = () => {
+                modal.classList.add('hidden');
+                onConfirm();
+            };
+
+            // Configurar el botón de cancelar
+            newBtnCancel.onclick = () => {
+                modal.classList.add('hidden');
+            };
+
+            modal.classList.remove('hidden');
+        };
+
+        // Inicialización de Firebase
+        const initApp = async () => {
+            console.log("Inicializando Firebase...");
+            try {
+                if (Object.keys(firebaseConfig).length === 0) {
+                    throw new Error("Configuración de Firebase no disponible. Usando valores predeterminados.");
+                }
+
+                // 1. Inicializar la aplicación
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // 2. Establecer el observador de estado de autenticación
+                onAuthStateChanged(auth, (user) => {
+                    const loadingState = document.getElementById('loading-state');
+                    const authReady = document.getElementById('auth-ready');
+                    const userIdDisplay = document.getElementById('user-id-display');
+                    const loginModal = document.getElementById('login-modal');
+
+                    if (user) {
+                        userId = user.uid;
+                        userIdDisplay.textContent = userId;
+
+                        loadingState.classList.add('hidden');
+                        authReady.classList.remove('hidden');
+                        
+                        if (document.getElementById('app-container').classList.contains('hidden')) {
+                             loginModal.classList.remove('hidden');
+                        } else {
+                            // Si ya estamos dentro (login de demo exitoso), empezamos a escuchar los datos
+                            setupTransactionsListener();
+                        }
+
+                        console.log(`Usuario Firebase autenticado. UID: ${userId}`);
+
+                    } else {
+                        userId = null;
+                        userIdDisplay.textContent = 'No autenticado';
+                        loadingState.textContent = 'Intentando autenticación anónima...';
+                        authReady.classList.add('hidden');
+                        loadingState.classList.remove('hidden');
+                        loginModal.classList.remove('hidden'); 
+                        console.warn("Usuario no autenticado, intentando sign-in.");
+                    }
+                });
+
+                // 3. Intentar iniciar sesión con Firebase (custom token o anónimo)
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                // Conectar el formulario de guardado a la función de guardado
+                document.getElementById('transaction-form').addEventListener('submit', window.saveTransaction);
+
+            } catch (error) {
+                console.error("Error al inicializar o autenticar Firebase:", error);
+                document.getElementById('loading-state').textContent = `Error crítico: ${error.message}. Verifica la configuración.`;
+            }
+        };
+
+        // Función global para cambiar de pestaña/vista
+        window.switchTab = (tabName) => {
+            const tabs = ['dashboard', 'transactions', 'reports'];
+            
+            // Lógica para mostrar/ocultar el botón de "Nueva Transacción"
+            const addButton = document.getElementById('add-transaction-button');
+            if (tabName === 'transactions') {
+                addButton.classList.remove('hidden');
+            } else {
+                addButton.classList.add('hidden');
+            }
+
+            // Ocultar todos los contenidos y desactivar botones
+            tabs.forEach(tab => {
+                document.getElementById(`content-${tab}`).classList.add('hidden');
+                document.getElementById(`tab-${tab}`).classList.remove('tab-active');
+            });
+
+            // Mostrar el contenido y activar el botón de la pestaña seleccionada
+            const contentElement = document.getElementById(`content-${tabName}`);
+            const buttonElement = document.getElementById(`tab-${tabName}`);
+            const titleElement = document.getElementById('current-tab-title');
+
+            if (contentElement && buttonElement) {
+                contentElement.classList.remove('hidden');
+                buttonElement.classList.add('tab-active');
+                titleElement.textContent = buttonElement.textContent.trim();
+                
+                // Llama al renderizado específico de la pestaña de reportes si es necesario
+                if (tabName === 'reports' && transactions.length > 0) {
+                    renderReports();
+                }
+            }
+        };
+
+
+        // Iniciar la aplicación al cargar la ventana
+        window.addEventListener('load', initApp);
+
+        // Asegurar que el listener de transacciones inicie al mostrar la UI
+        window.showAppUI = () => {
+            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            
+            // Si el login de demo fue exitoso, y ya tenemos el userId de Firebase, iniciamos el listener.
+            if (userId) {
+                setupTransactionsListener();
+            }
+        };
+        
     </script>
 </body>
 </html>
