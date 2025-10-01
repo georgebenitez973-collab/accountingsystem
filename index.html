@@ -21,6 +21,14 @@
             font-weight: 600;
             border-left: 4px solid #059669; /* Esmeralda 600 */
         }
+        .tab-group-title {
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            color: #4b5563; /* gray-600 */
+            margin-top: 1rem;
+            margin-bottom: 0.25rem;
+            font-size: 0.875rem; /* sm */
+        }
     </style>
 </head>
 <body>
@@ -61,39 +69,73 @@
                 <p class="text-xs text-gray-500 mt-1">App Contable</p>
             </div>
 
-            <!-- Menú de Pestañas -->
-            <nav class="flex-grow p-4 space-y-2">
-                <!-- Pestaña 1: Dashboard (por defecto) -->
+            <!-- Menú de Pestañas (Refactorizado para incluir las nuevas secciones) -->
+            <nav class="flex-grow p-4 space-y-2 overflow-y-auto">
+                
+                <!-- Grupo 1: Resumen -->
                 <button
                     id="tab-dashboard"
                     class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 tab-active"
                     onclick="switchTab('dashboard')">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                     Dashboard
                 </button>
-
-                <!-- Pestaña 2: Transacciones (Funcionalidad principal) -->
-                <button
-                    id="tab-transactions"
-                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-                    onclick="switchTab('transactions')">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 2v2m0 2v2m0 2v2M4 12h16" />
-                    </svg>
-                    Transacciones
-                </button>
-
-                <!-- Pestaña 3: Reportes (Implementación en este bloque) -->
                 <button
                     id="tab-reports"
                     class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
                     onclick="switchTab('reports')">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l-2 2m4 0l2-2v13m7-6h-2M4 6h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l-2 2m4 0l2-2v13m7-6h-2M4 6h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" /></svg>
                     Reportes
+                </button>
+
+                <!-- Separador de Grupo: Transacciones -->
+                <div class="tab-group-title">MOVIMIENTOS</div>
+                
+                <button
+                    id="tab-ingresos"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onclick="switchTab('ingresos')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Ingresos
+                </button>
+                <button
+                    id="tab-egresos"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onclick="switchTab('egresos')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Egresos
+                </button>
+
+                <!-- Separador de Grupo: Gestión -->
+                 <div class="tab-group-title">ADMINISTRACIÓN</div>
+
+                <button
+                    id="tab-nomina"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onclick="switchTab('nomina')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    Nómina
+                </button>
+                <button
+                    id="tab-profesores"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onclick="switchTab('profesores')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M20 10a8 8 0 01-16 0V7a2 2 0 012-2h4M9 16v-1a4 4 0 014-4h.5a4 4 0 014 4v1m-4.5 4H8.25" /></svg>
+                    Pagos a Profesores
+                </button>
+                <button
+                    id="tab-conciliacion"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onclick="switchTab('conciliacion')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Conciliación Bancaria
+                </button>
+                <button
+                    id="tab-proyecciones"
+                    class="tab-button w-full flex items-center p-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    onclick="switchTab('proyecciones')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    Proyecciones
                 </button>
             </nav>
 
@@ -109,7 +151,7 @@
             <!-- Barra superior para el nombre de la pestaña actual y acciones -->
             <header class="mb-8 p-4 bg-white shadow rounded-lg flex justify-between items-center">
                 <h2 id="current-tab-title" class="text-3xl font-extrabold text-gray-800">Dashboard</h2>
-                <!-- Botón para abrir el modal de nueva transacción. Solo visible en la pestaña Transacciones. -->
+                <!-- Botón para abrir el modal de nueva transacción. Ahora solo se muestra en Ingresos/Egresos -->
                 <button id="add-transaction-button" onclick="showTransactionModal()" class="px-4 py-2 bg-emerald-500 text-white rounded-lg shadow-md hover:bg-emerald-600 transition-colors duration-200 hidden">
                     + Nueva Transacción
                 </button>
@@ -117,7 +159,7 @@
 
             <!-- Contenedores de las Pestañas (Solo una visible a la vez) -->
 
-            <!-- Pestaña 1: Dashboard (Tablero Principal) - Contenido renderizado por JS (updateDashboardSummary) -->
+            <!-- Pestaña 1: Dashboard -->
             <section id="content-dashboard" class="tab-content">
                 <!-- Contenido se actualiza dinámicamente -->
                 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
@@ -132,15 +174,53 @@
                 </div>
             </section>
 
-            <!-- Pestaña 2: Transacciones (Listado) - Contenido renderizado por JS (renderTransactionsList) -->
-            <section id="content-transactions" class="tab-content hidden">
-                <!-- Contenido se actualiza dinámicamente -->
+            <!-- Pestaña 2: Ingresos (Usará la misma lógica de Transacciones, filtrada) -->
+            <section id="content-ingresos" class="tab-content hidden">
+                <!-- Contenido se actualizará por renderTransactionsList con filtro 'Ingreso' -->
             </section>
 
-            <!-- Pestaña 3: Reportes (Contenido nuevo: Gráficos y Resumen P&G) -->
+            <!-- Pestaña 3: Egresos (Usará la misma lógica de Transacciones, filtrada) -->
+            <section id="content-egresos" class="tab-content hidden">
+                <!-- Contenido se actualizará por renderTransactionsList con filtro 'Egreso' -->
+            </section>
+            
+            <!-- Pestaña 4: Reportes -->
             <section id="content-reports" class="tab-content hidden">
                  <!-- Este contenido será llenado por renderReports() -->
             </section>
+
+            <!-- Pestaña 5: Nómina (NUEVA) -->
+            <section id="content-nomina" class="tab-content hidden">
+                 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-700">Gestión de Nómina</h3>
+                    <p class="text-gray-600 mt-2">Aquí gestionarás los pagos recurrentes, impuestos y deducciones de los empleados. (Funcionalidad por desarrollar).</p>
+                </div>
+            </section>
+
+            <!-- Pestaña 6: Pagos a Profesores (NUEVA) -->
+            <section id="content-profesores" class="tab-content hidden">
+                 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-700">Registro de Pagos a Profesores</h3>
+                    <p class="text-gray-600 mt-2">Interfaz para registrar y liquidar pagos específicos relacionados con la carga horaria o servicios de los profesores. (Funcionalidad por desarrollar).</p>
+                </div>
+            </section>
+
+             <!-- Pestaña 7: Conciliación Bancaria (NUEVA) -->
+            <section id="content-conciliacion" class="tab-content hidden">
+                 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-700">Conciliación Bancaria</h3>
+                    <p class="text-gray-600 mt-2">Herramienta para comparar y conciliar las transacciones registradas en el sistema contra los extractos bancarios. (Funcionalidad por desarrollar).</p>
+                </div>
+            </section>
+
+            <!-- Pestaña 8: Proyecciones (NUEVA) -->
+            <section id="content-proyecciones" class="tab-content hidden">
+                 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-700">Modelos de Proyección Financiera</h3>
+                    <p class="text-gray-600 mt-2">Herramienta para crear y visualizar proyecciones de flujo de efectivo futuras basadas en datos históricos. (Funcionalidad por desarrollar).</p>
+                </div>
+            </section>
+
         </main>
     </div>
 
@@ -157,6 +237,7 @@
                     
                     <div>
                         <label for="transaction-type" class="block text-sm font-medium text-gray-700">Tipo</label>
+                        <!-- CAMBIO: Este select será configurado por JS al abrir el modal para Ingreso o Egreso -->
                         <select id="transaction-type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
                             <option value="Ingreso">Ingreso</option>
                             <option value="Egreso">Egreso</option>
@@ -180,6 +261,7 @@
 
                     <!-- Campo oculto para el ID en caso de edición -->
                     <input type="hidden" id="transaction-id">
+                    <input type="hidden" id="current-transaction-tab" value="ingresos"> <!-- Nuevo campo para rastrear la pestaña que abrió el modal -->
                 </div>
                 
                 <div class="mt-6 flex justify-end space-x-3">
@@ -227,6 +309,7 @@
         let app, db, auth, userId = null;
         let transactions = []; // Almacenará los datos de las transacciones
         let monthlyChart = null; // Variable para almacenar la instancia del gráfico
+        let activeTab = 'dashboard'; // Nueva variable para rastrear la pestaña activa
 
         // --- LÓGICA DE AUTENTICACIÓN DEMO ---
         const DEMO_USER = "Dulce";
@@ -289,10 +372,14 @@
                 
                 // Procesamiento y renderizado de transacciones
                 console.log("Transacciones cargadas en tiempo real:", transactions);
-                renderTransactionsList();
+                
+                // Actualiza todas las vistas dependientes
+                renderTransactionsList('ingresos');
+                renderTransactionsList('egresos');
                 updateDashboardSummary();
-                if (!document.getElementById('content-reports').classList.contains('hidden')) {
-                    // Solo si la pestaña de reportes está activa, la actualizamos
+                
+                // Solo si la pestaña de reportes está activa, la actualizamos
+                if (activeTab === 'reports') {
                     renderReports();
                 }
 
@@ -379,6 +466,9 @@
             document.getElementById('transaction-amount').value = transaction.amount;
             document.getElementById('transaction-description').value = transaction.description;
             document.getElementById('transaction-date').value = transaction.date;
+            // Configurar el campo oculto para que al guardar sepa a qué tab volver (aunque el listener lo gestiona)
+            document.getElementById('current-transaction-tab').value = transaction.type === 'Ingreso' ? 'ingresos' : 'egresos';
+
 
             document.getElementById('modal-title').textContent = "Editar Transacción";
             window.showTransactionModal();
@@ -404,47 +494,55 @@
 
         // --- UTILS ---
         const formatCurrency = (value) => `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+        const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
         // --- RENDERIZADO DE VISTAS ---
 
-        // Función para renderizar la tabla de transacciones
-        const renderTransactionsList = () => {
-            const content = document.getElementById('content-transactions');
-            
-            // Contenido de la pestaña Transacciones
+        /**
+         * Función para renderizar la tabla de transacciones, filtrando por tipo.
+         * @param {('ingresos'|'egresos')} transactionType - La pestaña a renderizar.
+         */
+        const renderTransactionsList = (transactionType) => {
+            const contentId = `content-${transactionType}`;
+            const content = document.getElementById(contentId);
+            if (!content) return;
+
+            // Determinar el tipo de transacción para el filtro
+            const requiredType = capitalize(transactionType).slice(0, -1); // 'Ingreso' o 'Egreso'
+            const filteredTransactions = transactions.filter(t => t.type === requiredType);
+
+            // Contenido de la pestaña Ingresos/Egresos
             content.innerHTML = `
                 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 overflow-x-auto">
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Listado de Transacciones</h3>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Listado de ${capitalize(transactionType)}</h3>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="transactions-table-body" class="bg-white divide-y divide-gray-200">
+                        <tbody id="transactions-table-body-${transactionType}" class="bg-white divide-y divide-gray-200">
                             <!-- Filas inyectadas por JS -->
                         </tbody>
                     </table>
-                    ${transactions.length === 0 ? '<p class="px-6 py-4 text-center text-gray-500">No hay transacciones registradas.</p>' : ''}
+                    ${filteredTransactions.length === 0 ? '<p class="px-6 py-4 text-center text-gray-500">No hay transacciones registradas de este tipo.</p>' : ''}
                 </div>
             `;
             
-            const tbody = document.getElementById('transactions-table-body');
+            const tbody = document.getElementById(`transactions-table-body-${transactionType}`);
             if (!tbody) return;
 
-            // Ordenar por fecha (más reciente primero), ya que Firestore no se ordena por defecto sin índices.
-            // Si las fechas son iguales, usamos el timestamp
-            const sortedTransactions = transactions.sort((a, b) => {
+            // Ordenar por fecha (más reciente primero)
+            const sortedTransactions = filteredTransactions.sort((a, b) => {
                 const dateA = new Date(a.date);
                 const dateB = new Date(b.date);
                 if (dateB.getTime() !== dateA.getTime()) {
-                    return dateB - dateA; // Ordenar por fecha
+                    return dateB - dateA; 
                 }
-                return b.timestamp - a.timestamp; // Si las fechas son iguales, ordenar por timestamp
+                return b.timestamp - a.timestamp;
             });
 
             tbody.innerHTML = sortedTransactions.map(t => {
@@ -456,11 +554,6 @@
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${t.date}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${t.description}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isIncome ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                ${t.type}
-                            </span>
-                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm ${amountClass}">
                             ${formattedAmount}
                         </td>
@@ -472,6 +565,7 @@
                 `;
             }).join('');
         };
+
 
         // Función para actualizar el resumen del Dashboard
         const updateDashboardSummary = () => {
@@ -538,7 +632,6 @@
             const sortedMonths = Object.keys(monthlyData).sort();
             const labels = sortedMonths.map(my => {
                 const [year, month] = my.split('-');
-                // Simplemente muestra el mes, el año ya está implícito en el orden
                 const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
                 return `${monthNames[parseInt(month) - 1]}-${year.substring(2)}`;
             });
@@ -649,12 +742,23 @@
         // --- LÓGICA DE MODALES (Transacción y Confirmación) ---
         
         window.showTransactionModal = () => {
+            // Obtener el tipo de transacción preseleccionado basado en la pestaña activa
+            const currentTab = document.getElementById('current-transaction-tab').value;
+            const transactionTypeSelect = document.getElementById('transaction-type');
+            
             // Limpiar el formulario y prepararlo para una nueva transacción
             document.getElementById('transaction-form').reset();
             document.getElementById('transaction-id').value = '';
-            document.getElementById('transaction-date').valueAsDate = new Date(); // Establecer fecha actual
+            document.getElementById('transaction-date').valueAsDate = new Date(); 
             document.getElementById('modal-title').textContent = "Nueva Transacción";
-            document.getElementById('transaction-message').classList.add('hidden'); // Ocultar mensaje de error anterior
+            document.getElementById('transaction-message').classList.add('hidden'); 
+
+            // Asegurar que el select refleje la pestaña desde donde se abrió
+            if (currentTab === 'ingresos') {
+                transactionTypeSelect.value = 'Ingreso';
+            } else if (currentTab === 'egresos') {
+                transactionTypeSelect.value = 'Egreso';
+            }
             
             document.getElementById('transaction-modal').classList.remove('hidden');
         };
@@ -758,12 +862,18 @@
 
         // Función global para cambiar de pestaña/vista
         window.switchTab = (tabName) => {
-            const tabs = ['dashboard', 'transactions', 'reports'];
-            
+            // Lista de todas las pestañas
+            const tabs = ['dashboard', 'ingresos', 'egresos', 'reports', 'nomina', 'profesores', 'conciliacion', 'proyecciones'];
+            activeTab = tabName; // Actualizar la pestaña activa
+
             // Lógica para mostrar/ocultar el botón de "Nueva Transacción"
             const addButton = document.getElementById('add-transaction-button');
-            if (tabName === 'transactions') {
+            const transactionTabField = document.getElementById('current-transaction-tab');
+            
+            if (tabName === 'ingresos' || tabName === 'egresos') {
                 addButton.classList.remove('hidden');
+                // Almacenar la pestaña actual en un campo oculto del modal para preseleccionar el tipo de transacción
+                transactionTabField.value = tabName; 
             } else {
                 addButton.classList.add('hidden');
             }
@@ -784,8 +894,12 @@
                 buttonElement.classList.add('tab-active');
                 titleElement.textContent = buttonElement.textContent.trim();
                 
-                // Llama al renderizado específico de la pestaña de reportes si es necesario
-                if (tabName === 'reports' && transactions.length > 0) {
+                // Llama al renderizado específico si es necesario
+                if (tabName === 'ingresos') {
+                    renderTransactionsList('ingresos');
+                } else if (tabName === 'egresos') {
+                    renderTransactionsList('egresos');
+                } else if (tabName === 'reports' && transactions.length > 0) {
                     renderReports();
                 }
             }
