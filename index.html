@@ -80,8 +80,8 @@
         <!-- 1. Barra de Navegación Lateral (Sidebar) -->
         <aside class="w-64 bg-white shadow-xl flex flex-col transition-all duration-300">
             <div class="p-6 border-b border-gray-100">
-                <h1 class="text-2xl font-bold text-gray-800">Sistema Contable</h1>
-                <p class="text-xs text-gray-500 mt-1">UDC</p>
+                <h1 class="text-2xl font-bold text-gray-800">Caja Pro</h1>
+                <p class="text-xs text-gray-500 mt-1">App Contable</p>
             </div>
 
             <!-- Menú de Pestañas (Refactorizado para incluir las nuevas secciones) -->
@@ -269,8 +269,16 @@
             <!-- Pestaña 7: Pagos a Profesores (NUEVA) -->
             <section id="content-profesores" class="tab-content hidden">
                  <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-700">Registro de Pagos a Profesores</h3>
-                    <p class="text-gray-600 mt-2">Interfaz para registrar y liquidar pagos específicos relacionados con la carga horaria o servicios de los profesores. (Funcionalidad por desarrollar).</p>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-700">Listado de Pagos a Profesores</h3>
+                        <button onclick="showProfessorPayModal()" class="px-4 py-2 bg-indigo-500 text-white rounded-lg shadow-md hover:bg-indigo-600 transition-colors duration-200">
+                            + Registrar Pago
+                        </button>
+                    </div>
+                    
+                    <div id="professor-payments-list-container" class="overflow-x-auto">
+                        <!-- Tabla de pagos a profesores inyectada por JS -->
+                    </div>
                 </div>
             </section>
 
@@ -554,7 +562,7 @@
     </div>
     
     <!-- 6. Modal para Registrar Pago de Nómina (NUEVO) -->
-    <div id="pay-modal" class="hidden fixed inset-0 z-40 bg-gray-900 bg-opacity-50 flex items-center justify-center">
+    <div id="pay-modal" class="hidden fixed inset-0 z-40 bg-gray-900 bg-opacity50 flex items-center justify-center">
         <!-- Contenedor del Modal -->
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300">
             <h3 class="text-2xl font-bold text-gray-800 mb-6">Registrar Pago de Nómina</h3>
@@ -599,6 +607,91 @@
             </form>
         </div>
     </div>
+    
+    <!-- 7. Modal para Registrar Pago a Profesores (NUEVO) -->
+    <div id="professor-pay-modal" class="hidden fixed inset-0 z-40 bg-gray-900 bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transform transition-all duration-300">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Registro de Pago a Profesor</h3>
+            <div id="professor-pay-message" class="hidden p-3 mb-4 text-sm rounded-lg text-red-700 bg-red-100 font-medium border border-red-200"></div>
+
+            <form id="professor-pay-form">
+                <input type="hidden" id="professor-pay-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Nombre del Profesor (Ficticio para Demo) -->
+                    <div>
+                        <label for="professor-pay-nombre" class="block text-sm font-medium text-gray-700">Nombre del Profesor/a</label>
+                        <select id="professor-pay-nombre" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                             <option value="">-- Seleccionar --</option>
+                             <option value="Prof. Ana García">Prof. Ana García</option>
+                             <option value="Dr. Juan López">Dr. Juan López</option>
+                             <option value="Mtra. Elena Díaz">Mtra. Elena Díaz</option>
+                             <option value="Lic. Pedro Ruiz">Lic. Pedro Ruiz</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Monto -->
+                    <div>
+                        <label for="professor-pay-monto" class="block text-sm font-medium text-gray-700">Monto ($)</label>
+                        <input type="number" id="professor-pay-monto" step="0.01" required placeholder="0.00" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+
+                    <!-- Empresa -->
+                    <div>
+                        <label for="professor-pay-empresa" class="block text-sm font-medium text-gray-700">Empresa / Entidad</label>
+                        <select id="professor-pay-empresa" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="UDC">UDC</option>
+                            <option value="IESM">IESM</option>
+                            <option value="Externo">Externo</option>
+                        </select>
+                    </div>
+
+                    <!-- Fecha de Pago -->
+                    <div>
+                        <label for="professor-pay-date" class="block text-sm font-medium text-gray-700">Fecha de Pago</label>
+                        <input type="date" id="professor-pay-date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    
+                    <!-- Concepto de Pago -->
+                    <div class="md:col-span-2">
+                         <label for="professor-pay-concepto" class="block text-sm font-medium text-gray-700">Concepto de Pago (Detalle)</label>
+                        <select id="professor-pay-concepto" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="Pago de Quincena (Q1)">Pago de Quincena (Q1)</option>
+                            <option value="Pago de Quincena (Q2)">Pago de Quincena (Q2)</option>
+                            <option value="Clases Adicionales / Suplencia">Clases Adicionales / Suplencia</option>
+                            <option value="Impartición de Curso / Diplomado">Impartición de Curso / Diplomado</option>
+                            <option value="Asesoría de Tesis / Titulación">Asesoría de Tesis / Titulación</option>
+                            <option value="Otro">Otro (Especificar en Referencia)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Programa / Referencia -->
+                    <div class="md:col-span-2">
+                        <label for="professor-pay-referencia" class="block text-sm font-medium text-gray-700">Programa / Referencia de Pago</label>
+                        <input type="text" id="professor-pay-referencia" placeholder="Ej: Maestría en Educación Gen 5, o Número de Transferencia" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    
+                    <!-- Adjuntar Comprobante -->
+                    <div class="md:col-span-2">
+                        <label for="professor-pay-comprobante" class="block text-sm font-medium text-gray-700">Adjuntar Comprobante (PDF)</label>
+                        <input type="file" id="professor-pay-comprobante" accept=".pdf" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <input type="hidden" id="professor-pay-comprobante-url">
+                    </div>
+
+                </div>
+                
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" onclick="hideProfessorPayModal()" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md">
+                        Registrar Pago
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 
     <!-- Lógica de Firebase y de la Aplicación -->
@@ -622,9 +715,10 @@
 
         let app, db, auth, userId = null;
         let transactions = []; // Almacenará los datos de las transacciones
-        let employees = []; // NUEVO: Almacenará el maestro de empleados
+        let employees = []; // Almacenará el maestro de empleados
+        let professorPayments = []; // NUEVO: Almacenará los pagos a profesores
         let monthlyChart = null; // Variable para almacenar la instancia del gráfico (Reportes)
-        let payrollChartInstance = null; // NUEVO: Variable para la gráfica de pastel de Nómina
+        let payrollChartInstance = null; // Variable para la gráfica de pastel de Nómina
         let activeTab = 'dashboard'; // Nueva variable para rastrear la pestaña activa
         
         // --- MAPA DE DATOS FICTICIO PARA AUTOCOMPLETADO DE GASOLINA ---
@@ -697,6 +791,17 @@
             return collection(db, 'artifacts', appId, 'users', userId, 'employees');
         };
         
+        /**
+         * NUEVO: Ruta de la colección de pagos a profesores.
+         */
+        const getProfessorPaymentsCollectionRef = () => {
+            if (!db || !userId) {
+                console.error("Firestore o userId no están disponibles.");
+                return null;
+            }
+            return collection(db, 'artifacts', appId, 'users', userId, 'professor_payments');
+        };
+
         // Escucha en tiempo real los cambios en las transacciones del usuario
         const setupTransactionsListener = () => {
             const transactionsRef = getTransactionsCollectionRef();
@@ -764,6 +869,30 @@
             });
         };
         
+        // NUEVO: Escucha en tiempo real los pagos a profesores
+        const setupProfessorPaymentsListener = () => {
+            const paymentsRef = getProfessorPaymentsCollectionRef();
+            if (!paymentsRef) return;
+
+            const q = query(paymentsRef);
+
+            onSnapshot(q, (snapshot) => {
+                professorPayments = [];
+                snapshot.forEach((doc) => {
+                    professorPayments.push({ id: doc.id, ...doc.data() });
+                });
+
+                console.log("Pagos a Profesores cargados en tiempo real:", professorPayments);
+                
+                if (activeTab === 'profesores') {
+                    renderProfessorPaymentsList();
+                }
+            
+            }, (error) => {
+                console.error("Error al escuchar pagos a profesores:", error);
+            });
+        };
+
 
         // --- MANEJO DE MENSAJES ---
 
@@ -822,6 +951,25 @@
             setTimeout(() => {
                 msgElement.classList.add('hidden');
             }, 8000);
+        };
+
+        // NUEVO: Muestra un mensaje temporal en el modal de pago a profesor
+        const showProfessorPayMessage = (message, isError = true) => {
+            const msgElement = document.getElementById('professor-pay-message');
+            msgElement.textContent = message;
+            msgElement.classList.remove('hidden');
+            
+            if (isError) {
+                msgElement.classList.remove('bg-green-100', 'text-green-700');
+                msgElement.classList.add('bg-red-100', 'text-red-700');
+            } else {
+                msgElement.classList.remove('bg-red-100', 'text-red-700');
+                msgElement.classList.add('bg-green-100', 'text-green-700');
+            }
+
+            setTimeout(() => {
+                msgElement.classList.add('hidden');
+            }, 5000);
         };
         
         // --- UTILS ---
@@ -1178,6 +1326,150 @@
                 console.error("Error al registrar el pago de nómina:", e);
             }
         });
+        
+        // --- LÓGICA DE PAGOS A PROFESORES ---
+        
+        window.showProfessorPayModal = () => {
+            document.getElementById('professor-pay-form').reset();
+            document.getElementById('professor-pay-id').value = '';
+            document.getElementById('professor-pay-date').valueAsDate = new Date();
+            document.getElementById('professor-pay-message').classList.add('hidden');
+            document.getElementById('professor-pay-modal').classList.remove('hidden');
+        };
+
+        window.hideProfessorPayModal = () => {
+            document.getElementById('professor-pay-modal').classList.add('hidden');
+        };
+
+        document.getElementById('professor-pay-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const id = document.getElementById('professor-pay-id').value;
+            const nombre = document.getElementById('professor-pay-nombre').value;
+            const monto = parseFloat(document.getElementById('professor-pay-monto').value) || 0;
+            const empresa = document.getElementById('professor-pay-empresa').value;
+            const concepto = document.getElementById('professor-pay-concepto').value;
+            const referencia = document.getElementById('professor-pay-referencia').value;
+            const date = document.getElementById('professor-pay-date').value;
+
+            if (monto <= 0 || !nombre || !concepto || !date) {
+                showProfessorPayMessage("Por favor, rellena los campos obligatorios (Nombre, Monto, Concepto y Fecha).");
+                return;
+            }
+            
+            // Simular manejo de comprobante (solo la URL/nombre)
+            const comprobanteFile = document.getElementById('professor-pay-comprobante').files[0];
+            let comprobanteUrl = '';
+            if (comprobanteFile) {
+                comprobanteUrl = `gs://storage-path/pago-profesor-${nombre.replace(/\s/g, '-')}-${date}-${comprobanteFile.name}`;
+            }
+
+            const paymentData = {
+                nombre,
+                monto,
+                empresa,
+                concepto,
+                referencia: referencia || 'N/A',
+                date,
+                timestamp: Date.now(),
+                comprobanteUrl
+            };
+            
+            const professorPaymentsRef = getProfessorPaymentsCollectionRef();
+            const transactionsRef = getTransactionsCollectionRef();
+            if (!professorPaymentsRef || !transactionsRef) return;
+
+            try {
+                let docRef;
+                if (id) {
+                    await setDoc(doc(professorPaymentsRef, id), paymentData);
+                    showProfessorPayMessage("Pago a profesor actualizado con éxito.", false);
+                    docRef = doc(professorPaymentsRef, id); // Mantener la referencia para el egreso
+                } else {
+                    docRef = await addDoc(professorPaymentsRef, paymentData);
+                    showProfessorPayMessage("Pago a profesor registrado con éxito.", false);
+                }
+                
+                // 2. Registrar el egreso en la colección general de transacciones
+                const transactionData = {
+                    type: 'Egreso',
+                    amount: monto,
+                    detalle: `Pago a profesor: ${nombre} por ${concepto}`, 
+                    date: date,
+                    timestamp: paymentData.timestamp,
+                    clasificacion: 'Gastos Operativos', // Clasificación estándar para pagos
+                    proveedor: nombre,
+                    concepto: 'Pagos a Profesores',
+                    empresa: empresa,
+                    referencia: referencia || concepto,
+                    // Enlazar al registro específico de profesor
+                    professor_payment_id: docRef.id 
+                };
+
+                // Podríamos buscar si ya existe una transacción ligada para actualizarla en lugar de crear una nueva,
+                // pero para simplificar, registraremos o actualizaremos la transacción principal:
+                // Si la lógica fuera 1:1, deberíamos buscar y actualizar el egreso, pero para fines de demo simple,
+                // asumiremos que cada registro aquí es un nuevo egreso.
+
+                await addDoc(transactionsRef, transactionData);
+                
+                setTimeout(hideProfessorPayModal, 1500); 
+            } catch (e) {
+                showProfessorPayMessage(`Error al guardar el pago: ${e.message}`);
+                console.error("Error al guardar el pago a profesor:", e);
+            }
+        });
+
+        /**
+         * Renderiza la tabla de pagos a profesores.
+         */
+        const renderProfessorPaymentsList = () => {
+            const container = document.getElementById('professor-payments-list-container');
+            if (professorPayments.length === 0) {
+                 container.innerHTML = `<p class="p-4 text-center text-gray-500">No hay pagos a profesores registrados.</p>`;
+                 return;
+            }
+
+            const sortedPayments = professorPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const tableRows = sortedPayments.map(p => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${p.date}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${p.nombre}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-600">${p.concepto}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-600">${p.referencia}</td>
+                    <td class="px-6 py-3 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.empresa === 'UDC' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}">
+                            ${p.empresa}
+                        </span>
+                    </td>
+                    <td class="px-6 py-3 whitespace-nowrap text-right text-sm text-red-600 font-semibold">${formatCurrency(p.monto)}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <a href="#" class="text-blue-600 hover:text-blue-900 transition-colors">Ver</a>
+                        <!-- Por simplicidad, solo mostramos el enlace si hay URL de comprobante -->
+                        ${p.comprobanteUrl ? `<a href="#" class="text-emerald-600 hover:text-emerald-900 transition-colors">Comprobante</a>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profesor</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concepto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody>
+                </table>
+            `;
+        };
+        
 
         // --- RENDERING DE NÓMINA ---
         
@@ -1683,15 +1975,26 @@
             tbody.innerHTML = sortedTransactions.map(tableBodyMapper).join('');
         };
 
-        const updateDashboardSummary = () => { /* ... (Logic remains the same) ... */
-             let totalIncome = 0;
+        const updateDashboardSummary = () => { /* --- MODIFICADO: AÑADIMOS RESUMEN DETALLADO --- */
+            let totalIncome = 0;
             let totalExpense = 0;
+            let totalPayroll = 0;
+            let totalProfessors = 0;
+            let totalGasolina = 0;
 
             transactions.forEach(t => {
                 if (t.type === 'Ingreso') {
                     totalIncome += t.amount;
                 } else if (t.type === 'Egreso') {
                     totalExpense += t.amount;
+                    
+                    if (t.concepto === 'Sueldos y Salarios') {
+                        totalPayroll += t.amount;
+                    } else if (t.concepto === 'Pagos a Profesores') {
+                        totalProfessors += t.amount;
+                    } else if (t.clasificacion === 'Gasolina') {
+                        totalGasolina += t.amount;
+                    }
                 }
             });
 
@@ -1701,26 +2004,46 @@
 
             const dashboardContent = document.getElementById('content-dashboard');
             dashboardContent.innerHTML = `
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">Resumen General</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                     <!-- Tarjeta de Saldo Actual -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
-                        <p class="text-sm font-medium text-gray-500">Saldo Actual</p>
+                    <div class="bg-white p-6 rounded-xl shadow-xl border-l-4 border-blue-500">
+                        <p class="text-sm font-medium text-gray-500">Saldo General (Neto)</p>
                         <p class="${balanceClass} mt-1">${formatCurrency(currentBalance)}</p>
                     </div>
                     <!-- Tarjeta de Ingresos Totales -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
+                    <div class="bg-white p-6 rounded-xl shadow-xl border-l-4 border-green-500">
                         <p class="text-sm font-medium text-gray-500">Ingresos Totales</p>
                         <p class="text-2xl font-bold text-green-600 mt-1">${formatCurrency(totalIncome)}</p>
                     </div>
                     <!-- Tarjeta de Egresos Totales -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-red-500">
+                    <div class="bg-white p-6 rounded-xl shadow-xl border-l-4 border-red-500">
                         <p class="text-sm font-medium text-gray-500">Egresos Totales</p>
                         <p class="text-2xl font-bold text-red-600 mt-1">${formatCurrency(totalExpense)}</p>
                     </div>
                 </div>
+                
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 mt-8">Gastos Operacionales Clave</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <!-- Tarjeta de Nómina -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
+                        <p class="text-sm font-medium text-gray-500">Gasto de Nómina (Sueldos)</p>
+                        <p class="text-xl font-bold text-purple-600 mt-1">${formatCurrency(totalPayroll)}</p>
+                    </div>
+                     <!-- Tarjeta de Pagos a Profesores -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-indigo-500">
+                        <p class="text-sm font-medium text-gray-500">Pagos a Profesores</p>
+                        <p class="text-xl font-bold text-indigo-600 mt-1">${formatCurrency(totalProfessors)}</p>
+                    </div>
+                    <!-- Tarjeta de Gasolina -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-orange-500">
+                        <p class="text-sm font-medium text-gray-500">Gasto Total de Gasolina</p>
+                        <p class="text-xl font-bold text-orange-600 mt-1">${formatCurrency(totalGasolina)}</p>
+                    </div>
+                </div>
 
-                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Resumen de la Actividad</h3>
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 mt-8">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Actividad</h3>
                     <p class="text-gray-600">Total de transacciones registradas: <span class="font-bold text-lg text-emerald-600">${transactions.length}</span></p>
                 </div>
             `;
@@ -2200,6 +2523,7 @@
                             // Iniciar listeners de Transacciones y Empleados una vez logueado
                             setupTransactionsListener();
                             setupEmployeesListener(); // NUEVO
+                            setupProfessorPaymentsListener(); // NUEVO
                         }
 
                         console.log(`Usuario Firebase autenticado. UID: ${userId}`);
@@ -2222,6 +2546,7 @@
                 }
                 
                 document.getElementById('transaction-form').addEventListener('submit', window.saveTransaction);
+                document.getElementById('professor-pay-form').addEventListener('submit', window.saveProfessorPayment); // NUEVO
 
             } catch (error) {
                 console.error("Error al inicializar o autenticar Firebase:", error);
@@ -2267,7 +2592,7 @@
                     renderTransactionsList('gasolina');
                 } else if (tabName === 'reports' && transactions.length > 0) {
                     renderReports();
-                } else if (tabName === 'nomina') { // NUEVO: Nómina
+                } else if (tabName === 'nomina') { // Nómina
                     renderEmployeeList();
                     if (employees.length > 0) {
                         renderPayrollPaymentTracker();
@@ -2276,6 +2601,8 @@
                          document.getElementById('payroll-payment-list').innerHTML = `<p class="p-4 text-center text-gray-500">Registra empleados para gestionar pagos.</p>`;
                          document.getElementById('nomina-total-mensual').textContent = formatCurrency(0);
                     }
+                } else if (tabName === 'profesores') { // NUEVO: Pagos a Profesores
+                    renderProfessorPaymentsList();
                 }
             }
         };
@@ -2290,6 +2617,7 @@
             if (userId) {
                 setupTransactionsListener();
                 setupEmployeesListener(); // NUEVO
+                setupProfessorPaymentsListener(); // NUEVO
             }
         };
         
